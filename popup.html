@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mantis Defect Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- HEADER -->
+  <div id="header">
+    <div id="header-left">
+      <span class="logo">🐛</span>
+      <div>
+        <div id="app-title">Mantis Defect Dashboard</div>
+        <div id="project-name">SQA Defect Management Reporting</div>
+      </div>
+    </div>
+    <div id="header-right">
+      <div id="last-updated"></div>
+      <div id="ticket-count"></div>
+    </div>
+  </div>
+
+  <!-- NOT A MANTIS PAGE WARNING -->
+  <div id="not-mantis" class="notice hidden">
+    <span class="notice-icon">⚠️</span>
+    <div>
+      <strong>Not a Mantis View Issues page</strong><br/>
+      Please navigate to a Mantis project's <em>View Issues</em> page first, then click Export.
+    </div>
+  </div>
+
+  <!-- EXPORT CONTROLS -->
+  <div id="controls">
+    <button id="btn-export" class="btn-primary" disabled>
+      <span class="btn-icon">📥</span> Export for Defect Management
+    </button>
+    <div id="export-status"></div>
+  </div>
+
+  <!-- COPY BOTH BUTTON -->
+  <div id="copy-bar" class="hidden">
+    <button class="btn-copy" id="btn-copy-both">
+      📋 Copy Both Dashboards (Paste to Outlook)
+    </button>
+    <button class="btn-copy btn-copy-alt" id="btn-copy-type">
+      Copy Type Dashboard
+    </button>
+    <button class="btn-copy btn-copy-alt" id="btn-copy-assignee">
+      Copy Assignee Dashboard
+    </button>
+  </div>
+
+  <!-- DASHBOARD AREA - Two tables side by side like Excel -->
+  <div id="dashboard-area" class="hidden">
+    <div id="dashboards-row">
+      <div id="panel-type" class="dashboard-panel"></div>
+      <div id="panel-assignee" class="dashboard-panel"></div>
+    </div>
+  </div>
+
+  <!-- EMPTY / ERROR STATE -->
+  <div id="empty-state" class="hidden">
+    <div class="empty-icon">📊</div>
+    <div class="empty-text">No data yet. Click Export to load your Mantis tickets.</div>
+  </div>
+
+  <script src="parser.js"></script>
+  <script src="dashboard.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

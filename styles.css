@@ -1,0 +1,344 @@
+/* styles.css - Mantis Defect Dashboard Extension */
+
+:root {
+  --blue-dark:    #1F4E79;
+  --blue-mid:     #2E75B6;
+  --blue-light:   #BDD7EE;
+  --blue-pale:    #DEEAF1;
+  --blue-row:     #D6E4F7;
+  --white:        #FFFFFF;
+  --gray-border:  #BFBFBF;
+  --gray-light:   #F2F2F2;
+  --text-dark:    #1A1A1A;
+  --text-mid:     #404040;
+  --green-ok:     #107C10;
+  --red-err:      #C30000;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: Calibri, Arial, sans-serif;
+  font-size: 12px;
+  background: #F5F7FA;
+  color: var(--text-dark);
+  min-width: 900px;
+  max-width: 1400px;
+}
+
+/* ── HEADER ──────────────────────────────── */
+#header {
+  background: var(--blue-dark);
+  color: var(--white);
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo { font-size: 22px; }
+
+#app-title {
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 0.3px;
+}
+
+#project-name {
+  font-size: 11px;
+  opacity: 0.8;
+  margin-top: 1px;
+}
+
+#header-right {
+  text-align: right;
+  font-size: 10px;
+  opacity: 0.85;
+}
+
+#ticket-count {
+  font-weight: bold;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* ── NOTICE ──────────────────────────────── */
+.notice {
+  background: #FFF4CE;
+  border-left: 4px solid #F0A500;
+  padding: 8px 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 11px;
+  color: #5A3500;
+}
+.notice-icon { font-size: 16px; }
+.hidden { display: none !important; }
+
+/* ── CONTROLS ────────────────────────────── */
+#controls {
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #EEF3FB;
+  border-bottom: 1px solid #D0D8E8;
+}
+
+.btn-primary {
+  background: var(--blue-mid);
+  color: var(--white);
+  border: none;
+  padding: 7px 16px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s;
+}
+
+.btn-primary:hover:not(:disabled) { background: var(--blue-dark); }
+.btn-primary:disabled { background: #A0B4CC; cursor: not-allowed; }
+
+.btn-icon { font-size: 14px; }
+.btn-icon.spin { display: inline-block; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.export-msg { font-size: 11px; }
+.export-msg.success { color: var(--green-ok); font-weight: bold; }
+.export-msg.error { color: var(--red-err); }
+
+/* ── COPY BAR ────────────────────────────── */
+#copy-bar {
+  padding: 6px 14px;
+  background: #F0F4FC;
+  border-bottom: 1px solid #D0D8E8;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.btn-copy {
+  background: var(--blue-dark);
+  color: var(--white);
+  border: none;
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-copy:hover { background: #152F4B; }
+.btn-copy.btn-copy-alt { background: var(--blue-mid); font-weight: normal; }
+.btn-copy.btn-copy-alt:hover { background: var(--blue-dark); }
+.btn-copy.copied { background: var(--green-ok); }
+
+/* ── DASHBOARD AREA ──────────────────────── */
+#dashboard-area {
+  padding: 10px 14px 14px;
+  overflow-x: auto;
+}
+
+#dashboards-row {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.dashboard-panel {
+  flex: 1 1 auto;
+  min-width: 380px;
+}
+
+/* ── DASHBOARD TITLE ─────────────────────── */
+.dashboard-title {
+  background: var(--blue-dark);
+  color: var(--white);
+  font-weight: bold;
+  font-size: 11px;
+  padding: 5px 10px;
+  letter-spacing: 0.2px;
+  margin-bottom: 0;
+}
+
+/* ── PIVOT TABLE ─────────────────────────── */
+.pivot-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 11px;
+  font-family: Calibri, Arial, sans-serif;
+  margin-bottom: 0;
+}
+
+/* Header rows */
+.pivot-table thead tr:first-child th {
+  background: var(--blue-dark);
+  color: var(--white);
+  font-weight: bold;
+  border: 1px solid var(--blue-mid);
+  padding: 4px 8px;
+  text-align: center;
+}
+
+.header-main { background: var(--blue-dark) !important; }
+.header-group {
+  background: var(--blue-dark) !important;
+  font-style: italic;
+  font-size: 10px;
+  letter-spacing: 0.3px;
+}
+
+.pivot-table thead tr:last-child th {
+  background: var(--blue-dark);
+  color: var(--white);
+  font-weight: bold;
+  border: 1px solid #2C5F8A;
+  padding: 4px 8px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.col-label { text-align: left !important; min-width: 140px; }
+.col-label-sub { text-align: left !important; min-width: 160px; }
+.col-status { min-width: 70px; }
+.col-total { min-width: 80px; background: #16375A !important; }
+
+/* Body rows */
+.pivot-table tbody tr { vertical-align: middle; }
+
+/* Type label row */
+.row-type-label td.cell-type {
+  background: var(--blue-row);
+  font-weight: bold;
+  padding: 3px 8px;
+  border: 1px solid var(--gray-border);
+  font-size: 11px;
+}
+
+.row-type-label td {
+  background: var(--blue-row);
+  border: 1px solid var(--gray-border);
+  padding: 3px 2px;
+}
+
+/* Severity row */
+.row-severity td.cell-severity {
+  background: var(--blue-pale);
+  padding: 3px 8px;
+  border: 1px solid var(--gray-border);
+  font-size: 11px;
+  color: var(--text-mid);
+}
+
+.row-severity td {
+  background: var(--white);
+  border: 1px solid var(--gray-border);
+  padding: 3px 6px;
+  text-align: center;
+}
+
+/* Type total row */
+.row-type-total td.cell-type-total {
+  background: var(--blue-light);
+  font-weight: bold;
+  padding: 3px 8px;
+  border: 1px solid var(--gray-border);
+  font-size: 11px;
+}
+
+.row-type-total td.cell-subtotal,
+.row-type-total td.cell-subtotal-total {
+  background: var(--blue-light);
+  font-weight: bold;
+  border: 1px solid var(--gray-border);
+  text-align: center;
+  padding: 3px 6px;
+}
+
+/* Grand total row */
+.row-grand-total td {
+  background: var(--blue-dark);
+  color: var(--white);
+  font-weight: bold;
+  border: 1px solid var(--blue-mid);
+  padding: 4px 8px;
+  text-align: center;
+}
+
+.row-grand-total td.cell-grand-label {
+  text-align: left;
+}
+
+/* Value cells */
+.cell-value {
+  text-align: center;
+  color: var(--text-dark);
+}
+
+.cell-total {
+  text-align: center;
+  font-weight: bold;
+  background: #EAF0F9 !important;
+  color: var(--blue-dark);
+}
+
+/* Assignee dashboard specifics */
+.row-severity-header td.cell-severity-h {
+  background: var(--blue-pale);
+  font-weight: bold;
+  padding: 3px 8px;
+  border: 1px solid var(--gray-border);
+  font-size: 11px;
+}
+
+.row-severity-header td {
+  background: var(--blue-pale);
+  border: 1px solid var(--gray-border);
+  padding: 3px 2px;
+}
+
+.row-assignee td {
+  background: var(--white);
+  border: 1px solid var(--gray-border);
+  padding: 2px 6px;
+}
+
+.cell-assignee {
+  font-size: 10px;
+  color: var(--text-mid);
+  text-align: left !important;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell-empty {
+  background: var(--white);
+  border: 1px solid var(--gray-border);
+}
+
+/* Zebra striping for assignee rows */
+.row-assignee:nth-child(even) td { background: #FAFBFD; }
+
+/* ── EMPTY STATE ─────────────────────────── */
+#empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6B7280;
+}
+.empty-icon { font-size: 40px; margin-bottom: 10px; }
+.empty-text { font-size: 12px; }

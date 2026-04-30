@@ -40,6 +40,17 @@
     <div id="export-status"></div>
   </div>
 
+  <!-- SECONDARY CONTROLS -->
+  <div id="secondary-controls">
+    <button class="btn-secondary" id="btn-sample">🧪 Load Sample Data</button>
+    <button class="btn-secondary" id="btn-debug">🔍 Diagnose Export</button>
+  </div>
+
+  <!-- DIAGNOSIS PANEL -->
+  <div id="debug-panel" class="hidden">
+    <div id="debug-content"></div>
+  </div>
+
   <!-- COPY BOTH BUTTON -->
   <div id="copy-bar" class="hidden">
     <button class="btn-copy" id="btn-copy-both">
@@ -64,7 +75,18 @@
   <!-- EMPTY / ERROR STATE -->
   <div id="empty-state" class="hidden">
     <div class="empty-icon">📊</div>
-    <div class="empty-text">No data yet. Click Export to load your Mantis tickets.</div>
+    <div class="empty-text">No data yet. Click <strong>Export</strong> to load your Mantis tickets.<br/>
+    Or click <strong>🧪 Load Sample Data</strong> to preview the dashboard with your template data.</div>
+    <div class="troubleshoot">
+      <strong>🛠 Troubleshooting tips if Export shows "No data":</strong>
+      <ol>
+        <li>Make sure you are <strong>logged in</strong> to Mantis</li>
+        <li>Navigate to a project → <strong>View Issues</strong> page</li>
+        <li>Check that the page has a <strong>CSV Export</strong> link visible</li>
+        <li>Click <strong>🔍 Diagnose Export</strong> to see what was received</li>
+        <li>If it says "HTML page received" — your session may have expired; log in again</li>
+      </ol>
+    </div>
   </div>
 
   <script src="parser.js"></script>

@@ -342,3 +342,84 @@ body {
 }
 .empty-icon { font-size: 40px; margin-bottom: 10px; }
 .empty-text { font-size: 12px; }
+
+/* ── SECONDARY CONTROLS ──────────────────── */
+#secondary-controls {
+  padding: 5px 14px;
+  background: #F8F9FC;
+  border-bottom: 1px solid #E0E4EE;
+  display: flex;
+  gap: 8px;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--blue-mid);
+  border: 1px solid var(--blue-mid);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-secondary:hover { background: var(--blue-pale); }
+
+/* ── DIAGNOSIS PANEL ─────────────────────── */
+#debug-panel {
+  margin: 8px 14px;
+  border: 1px solid #E0C070;
+  border-radius: 4px;
+  background: #FFFDF0;
+  padding: 10px 12px;
+  font-size: 11px;
+}
+
+.diag-error {
+  color: #7B0000;
+  background: #FFF0F0;
+  border-left: 3px solid #C30000;
+  padding: 8px;
+  border-radius: 2px;
+  line-height: 1.6;
+}
+
+.diag-warn {
+  color: #5A3500;
+  background: #FFF9EC;
+  border-left: 3px solid #F0A500;
+  padding: 8px;
+  border-radius: 2px;
+  line-height: 1.6;
+}
+
+.diag-warn code, .diag-error code {
+  display: block;
+  font-family: monospace;
+  font-size: 10px;
+  background: rgba(0,0,0,0.05);
+  padding: 3px 6px;
+  margin-top: 4px;
+  border-radius: 2px;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+/* ── TROUBLESHOOTING ─────────────────────── */
+.troubleshoot {
+  margin-top: 16px;
+  background: #F0F4FC;
+  border: 1px solid #C8D6EE;
+  border-radius: 4px;
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 11px;
+  color: var(--text-mid);
+  max-width: 420px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.troubleshoot strong { color: var(--blue-dark); }
+.troubleshoot ol { margin: 6px 0 0 16px; line-height: 1.8; }
+
+.export-msg.warn { color: #7B5000; font-weight: bold; }

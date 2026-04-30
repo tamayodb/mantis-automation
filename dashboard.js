@@ -242,7 +242,7 @@ function buildOutlookHTML(table) {
 
       // ── Single-cell spanning header row: "Per Ticket Type Dashboard" title ──
       if (cls.includes('header-group') || cls.includes('header-main')) {
-        cell.style.cssText = base + navy + center + 'font-size:12px;padding:5px 8px;';
+        cell.style.cssText = 'color:#FFFFFF;font-size:12px;padding:5px 8px;' + center + navy;
 
       // ── Column header row: col-label, col-label-sub, col-status, col-total ──
       } else if (
@@ -251,11 +251,11 @@ function buildOutlookHTML(table) {
         cls.includes('col-status') ||
         cls.includes('col-total')
       ) {
-        cell.style.cssText = base + navy + center;
-        if (cls.includes('col-label') || cls.includes('col-label-sub')) {
-          cell.style.textAlign = 'left';
-        }
-
+        cell.style.cssText = base + center;
+          if (cls.includes('col-label') || cls.includes('col-label-sub')) {
+            cell.style.textAlign = 'left';
+            cell.style.backgroundColor = '#5B9BD5';
+          }
       // ── Orange type-total row ──
       //   cell-type-total      → label (left)
       //   cell-subtotal        → status counts (center)
@@ -277,11 +277,11 @@ function buildOutlookHTML(table) {
 
       // ── Data value / row-total cells ──
       } else if (cls.includes('cell-value') || cls.includes('cell-total')) {
-        cell.style.cssText = base + white + center;
+        cell.style.cssText = base + white + center + 'font-weight:normal;';
 
       // ── Assignee cell: render as Outlook mailto hyperlink ──
       } else if (cls.includes('cell-assignee')) {
-        cell.style.cssText = base + white + left;
+        cell.style.cssText = base + white + left + 'font-weight:normal;';
         // Convert any plain-text email inside to a mailto anchor
         const a = cell.querySelector('a.cell-assignee-link');
         if (a) {

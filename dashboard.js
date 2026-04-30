@@ -11,6 +11,10 @@ function renderTypeDashboard(tickets) {
   <table class="pivot-table" id="table-type-dashboard">
     <thead>
       <tr>
+        <th class="header-main" colspan="1"></th>
+        <th class="header-group" colspan="${statuses.length + 1}">Column Labels</th>
+      </tr>
+      <tr>
         <th class="col-label">Type/Severity/Status</th>
         ${statuses.map(s => `<th class="col-status">${capitalize(s)}</th>`).join('')}
         <th class="col-total">Grand Total</th>
@@ -18,31 +22,26 @@ function renderTypeDashboard(tickets) {
     </thead>
     <tbody>`;
 
+  // Group rows so the orange type_total row renders FIRST,
+  // followed by its severity breakdown rows underneath.
+  const groups = [];
+  let currentGroup = null;
+
   rows.forEach(row => {
-    if (row.kind === 'severity') {
-      const cells = statuses.map(s => {
-        const v = row.counts[s] || 0;
-        return `<td class="cell-value">${v > 0 ? v : ''}</td>`;
-      }).join('');
-      html += `<tr class="row-severity">
-        <td class="cell-severity">&nbsp;&nbsp;&nbsp;${capitalize(row.severity)}</td>
-        ${cells}
-        <td class="cell-total">${row.rowTotal > 0 ? row.rowTotal : ''}</td>
-      </tr>`;
-
-    } else if (row.kind === 'type_total') {
-      // Orange header row for each type (Issue, Query, Defect, etc.)
-      const cells = statuses.map(s => {
-        const v = row.counts[s] || 0;
-        return `<td class="cell-type-count">${v > 0 ? v : ''}</td>`;
-      }).join('');
-      html += `<tr class="row-type-total">
-        <td class="cell-type-label">${row.type}</td>
-        ${cells}
-        <td class="cell-type-grand">${row.rowTotal > 0 ? row.rowTotal : ''}</td>
-      </tr>`;
-
+    if (row.kind === 'type_total') {
+      currentGroup = { total: row, severities: [] };
+      groups.push(currentGroup);
+    } else if (row.kind === 'severity') {
+      if (currentGroup) currentGroup.severities.push(row);
     } else if (row.kind === 'grand_total') {
+      groups.push({ grandTotal: row });
+    }
+  });
+
+  groups.forEach(group => {
+    if (group.grandTotal) {
+      // Grand Total row — dark navy
+      const row = group.grandTotal;
       const cells = statuses.map(s => {
         const v = row.counts[s] || 0;
         return `<td class="cell-grand">${v > 0 ? v : ''}</td>`;
@@ -52,6 +51,32 @@ function renderTypeDashboard(tickets) {
         ${cells}
         <td class="cell-grand">${row.rowTotal}</td>
       </tr>`;
+
+    } else {
+      // Orange type total row FIRST
+      const total = group.total;
+      const totalCells = statuses.map(s => {
+        const v = total.counts[s] || 0;
+        return `<td class="cell-subtotal">${v > 0 ? v : ''}</td>`;
+      }).join('');
+      html += `<tr class="row-type-total">
+        <td class="cell-type-total">${total.type}</td>
+        ${totalCells}
+        <td class="cell-subtotal-total">${total.rowTotal > 0 ? total.rowTotal : ''}</td>
+      </tr>`;
+
+      // Then severity breakdown rows (major, minor, block…)
+      group.severities.forEach(row => {
+        const cells = statuses.map(s => {
+          const v = row.counts[s] || 0;
+          return `<td class="cell-value">${v > 0 ? v : ''}</td>`;
+        }).join('');
+        html += `<tr class="row-severity">
+          <td class="cell-severity">&nbsp;&nbsp;&nbsp;${capitalize(row.severity)}</td>
+          ${cells}
+          <td class="cell-total">${row.rowTotal > 0 ? row.rowTotal : ''}</td>
+        </tr>`;
+      });
     }
   });
 
@@ -70,6 +95,10 @@ function renderAssigneeDashboard(tickets) {
   <table class="pivot-table" id="table-assignee-dashboard">
     <thead>
       <tr>
+        <th class="header-main" colspan="2"></th>
+        <th class="header-group" colspan="${statuses.length + 1}">Column Labels</th>
+      </tr>
+      <tr>
         <th class="col-label">Row Labels</th>
         <th class="col-label-sub">Assigned To</th>
         ${statuses.map(s => `<th class="col-status">${capitalize(s)}</th>`).join('')}
@@ -80,15 +109,10 @@ function renderAssigneeDashboard(tickets) {
 
   rows.forEach(row => {
     if (row.kind === 'type_header') {
-      // Orange type header row with totals
-      const cells = statuses.map(s => {
-        const v = (row.counts && row.counts[s]) || 0;
-        return `<td class="cell-type-count">${v > 0 ? v : ''}</td>`;
-      }).join('');
-      html += `<tr class="row-type-total">
-        <td class="cell-type-label" colspan="2">${row.type}</td>
-        ${cells}
-        <td class="cell-type-grand">${row.rowTotal > 0 ? row.rowTotal : ''}</td>
+      html += `<tr class="row-type-label">
+        <td class="cell-type" colspan="2">${row.type}</td>
+        ${statuses.map(() => '<td></td>').join('')}
+        <td></td>
       </tr>`;
 
     } else if (row.kind === 'severity_header') {
@@ -170,44 +194,69 @@ function copyDashboardToClipboard(tableId, btnEl) {
 }
 
 function buildOutlookHTML(table) {
+  // Clone table and apply inline styles that exactly mirror
+  // the CSS injected by injectDashboardStyles() in popup.js.
   const clone = table.cloneNode(true);
   const rows = clone.querySelectorAll('tr');
 
+  // Base font shared by every cell
+  const base = 'font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #BFBFBF;';
+  const navy = 'background-color:#1F4E79;color:#FFFFFF;font-weight:bold;';
+  const orange = 'background-color:#E87722;color:#FFFFFF;font-weight:bold;';
+  const center = 'text-align:center;';
+
   rows.forEach(tr => {
-    const cells = tr.querySelectorAll('td, th');
-    cells.forEach(cell => {
+    tr.querySelectorAll('td, th').forEach(cell => {
       const cls = cell.className;
 
-      // Column header cells — dark navy, white bold
-      if (cls.includes('col-status') || cls.includes('col-total') || cls.includes('col-label')) {
-        cell.style.cssText = 'background-color:#1F4E79;color:#FFFFFF;font-weight:bold;font-family:Calibri,Arial,sans-serif;font-size:11px;padding:4px 8px;border:1px solid #BFBFBF;text-align:center;';
-      }
-      // Orange type row — label cell
-      else if (cls.includes('cell-type-label')) {
-        cell.style.cssText = 'background-color:#E87722;color:#FFFFFF;font-weight:bold;font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #BFBFBF;';
-      }
-      // Orange type row — count/grand cells
-      else if (cls.includes('cell-type-count') || cls.includes('cell-type-grand')) {
-        cell.style.cssText = 'background-color:#E87722;color:#FFFFFF;font-weight:bold;font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #BFBFBF;text-align:center;';
-      }
-      // Grand total row — dark navy, white bold
-      else if (cls.includes('cell-grand-label') || cls.includes('cell-grand')) {
-        cell.style.cssText = 'background-color:#1F4E79;color:#FFFFFF;font-weight:bold;font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #BFBFBF;text-align:center;';
-      }
-      // Severity label cells
-      else if (cls.includes('cell-severity') || cls.includes('cell-severity-h')) {
-        cell.style.cssText = 'background-color:#FFFFFF;font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #BFBFBF;';
-      }
-      // Data value cells and row totals
-      else if (cls.includes('cell-value') || cls.includes('cell-total')) {
-        cell.style.cssText = 'background-color:#FFFFFF;font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #BFBFBF;text-align:center;';
-      }
-      // Assignee email cells
-      else if (cls.includes('cell-assignee')) {
-        cell.style.cssText = 'background-color:#FFFFFF;font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #BFBFBF;color:#0563C1;text-decoration:underline;';
-      }
-      else {
-        cell.style.cssText = 'background-color:#FFFFFF;font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #BFBFBF;';
+      // ── thead: header-group, col-label, col-label-sub, col-status, col-total ──
+      if (
+        cls.includes('header-group') ||
+        cls.includes('header-main') ||
+        cls.includes('col-label') ||
+        cls.includes('col-label-sub') ||
+        cls.includes('col-status') ||
+        cls.includes('col-total')
+      ) {
+        cell.style.cssText = base + navy + center;
+        if (cls.includes('col-label') || cls.includes('col-label-sub')) {
+          cell.style.textAlign = 'left';
+        }
+
+      // ── Orange type-total row ──
+      // cell-type-total  →  label cell (left-aligned)
+      // cell-subtotal    →  count cells (centered)
+      // cell-subtotal-total → grand cell of the row (centered)
+      } else if (cls.includes('cell-type-total')) {
+        cell.style.cssText = base + orange + 'text-align:left;';
+      } else if (cls.includes('cell-subtotal-total') || cls.includes('cell-subtotal')) {
+        cell.style.cssText = base + orange + center;
+
+      // ── Orange type-label row (assignee table: cell-type) ──
+      } else if (cls.includes('cell-type')) {
+        cell.style.cssText = base + orange + 'text-align:left;';
+
+      // ── Grand total row ──
+      } else if (cls.includes('cell-grand-label')) {
+        cell.style.cssText = base + navy + 'text-align:left;';
+      } else if (cls.includes('cell-grand')) {
+        cell.style.cssText = base + navy + center;
+
+      // ── Severity label cells ──
+      } else if (cls.includes('cell-severity-h') || cls.includes('cell-severity')) {
+        cell.style.cssText = base + 'background-color:#FFFFFF;color:#000000;text-align:left;';
+
+      // ── Data value / row-total cells ──
+      } else if (cls.includes('cell-value') || cls.includes('cell-total')) {
+        cell.style.cssText = base + 'background-color:#FFFFFF;color:#000000;' + center;
+
+      // ── Assignee email cells ──
+      } else if (cls.includes('cell-assignee')) {
+        cell.style.cssText = base + 'background-color:#FFFFFF;color:#0563C1;text-decoration:underline;text-align:left;';
+
+      // ── Everything else (empty spacer cells, etc.) ──
+      } else {
+        cell.style.cssText = base + 'background-color:#FFFFFF;';
       }
     });
   });

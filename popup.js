@@ -1,5 +1,8 @@
 document.addEventListener('DOMContentLoaded', async () => {
 
+  // ── Inject dashboard CSS that matches the Excel screenshot design ──
+  injectDashboardStyles();
+
   const btnExport     = document.getElementById('btn-export');
   const exportStatus  = document.getElementById('export-status');
   const notMantis     = document.getElementById('not-mantis');
@@ -46,7 +49,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (data.lastCSV && data.lastCSV.trim() !== '') {
       const parsed = parseCSV(data.lastCSV);
       console.log(`[Popup] Parsed: ${parsed.length} tickets`);
-      
+
       if (parsed.length === 0 && rawCount > 0) {
         console.warn(`[Popup] ⚠️ DATA LOSS: Expected ${rawCount} tickets but parsed 0!`);
       }
@@ -108,7 +111,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       const tickets = parseCSV(csv);
 
       if (tickets.length === 0) {
-        // CSV was stored but parsed to nothing — show diagnosis
         showDiagnosis(csv);
         setExportStatus('⚠️ Data received but could not parse tickets. See diagnosis below.', 'warn');
       } else {
@@ -142,9 +144,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const parsed = parseCSV(data.lastCSV);
         const lost = rawCount - parsed.length;
         const lossPercent = rawCount > 0 ? Math.round((lost / rawCount) * 100) : 0;
-        
+
         console.log('[Popup] Debug - Raw lines:', rawCount, 'Parsed tickets:', parsed.length, 'Lost:', lost);
-        
+
         let stats = `<div class="diag-stats">
           <strong>CSV Statistics:</strong><br/>
           CSV Size: ${data.lastCSV.length} characters<br/>
@@ -158,7 +160,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
           stats += `<strong style="color:#107C10">No data loss detected!</strong><br/>`;
         }
-        
+
         stats += `</div>`;
 
         if (parsed.length > 0) {
@@ -169,7 +171,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           </div>`;
         }
 
-        debugContent.innerHTML = stats + '<hr style="margin:8px 0">' + 
+        debugContent.innerHTML = stats + '<hr style="margin:8px 0">' +
           `<div style="margin-top:8px">
             <button id="btn-download-csv" class="btn-secondary" style="margin-right:8px;padding:6px 10px;font-size:10px;">⬇️ Download CSV</button>
           </div>
@@ -178,7 +180,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             <pre style="font-size:9px;margin-top:4px;white-space:pre-wrap;word-break:break-all">${data.lastCSV.substring(0, 300).replace(/</g, '&lt;')}</pre>
           </details>`;
 
- 
         setTimeout(() => {
           const dlBtn = document.getElementById('btn-download-csv');
           if (dlBtn) {
@@ -283,5 +284,129 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (e) {
       setExportStatus('❌ Copy failed: ' + e.message, 'error');
     }
+  }
+
+  // ── INJECT DASHBOARD TABLE STYLES ────────────────────────────────
+  function injectDashboardStyles() {
+    if (document.getElementById('dashboard-injected-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'dashboard-injected-styles';
+    style.textContent = `
+      /* ── Dashboard title ── */
+      .dashboard-title {
+        background-color: #1F4E79;
+        color: #FFFFFF;
+        font-family: Calibri, Arial, sans-serif;
+        font-size: 12px;
+        font-weight: bold;
+        text-align: center;
+        padding: 5px 8px;
+        border: 1px solid #BFBFBF;
+        border-bottom: none;
+      }
+
+      /* ── Table base ── */
+      .pivot-table {
+        border-collapse: collapse;
+        font-family: Calibri, Arial, sans-serif;
+        font-size: 11px;
+        width: 100%;
+        table-layout: auto;
+      }
+
+      /* ── Header row: dark navy ── */
+      .pivot-table thead tr th {
+        background-color: #1F4E79;
+        color: #FFFFFF;
+        font-weight: bold;
+        padding: 4px 8px;
+        border: 1px solid #BFBFBF;
+        text-align: center;
+        white-space: nowrap;
+      }
+      .pivot-table thead tr th.col-label,
+      .pivot-table thead tr th.col-label-sub {
+        text-align: left;
+      }
+
+      /* ── Orange type header rows (Issue, Query, Defect…) ── */
+      .row-type-total td.cell-type-label {
+        background-color: #E87722;
+        color: #FFFFFF;
+        font-weight: bold;
+        padding: 3px 8px;
+        border: 1px solid #BFBFBF;
+        text-align: left;
+      }
+      .row-type-total td.cell-type-count,
+      .row-type-total td.cell-type-grand {
+        background-color: #E87722;
+        color: #FFFFFF;
+        font-weight: bold;
+        padding: 3px 8px;
+        border: 1px solid #BFBFBF;
+        text-align: center;
+      }
+
+      /* ── Severity rows (major, minor, block) ── */
+      .row-severity td,
+      .row-severity-header td {
+        background-color: #FFFFFF;
+        padding: 3px 8px;
+        border: 1px solid #BFBFBF;
+      }
+      .cell-severity,
+      .cell-severity-h {
+        text-align: left;
+        color: #000000;
+      }
+      .cell-value,
+      .cell-total {
+        text-align: center;
+        color: #000000;
+      }
+
+      /* ── Assignee rows ── */
+      .row-assignee td {
+        background-color: #FFFFFF;
+        padding: 3px 8px;
+        border: 1px solid #BFBFBF;
+      }
+      .cell-assignee {
+        color: #0563C1;
+        text-decoration: underline;
+        cursor: default;
+        text-align: left;
+        font-size: 10px;
+      }
+      .cell-empty {
+        background-color: #FFFFFF;
+      }
+
+      /* ── Grand Total row: dark navy ── */
+      .row-grand-total td.cell-grand-label,
+      .row-grand-total td.cell-grand {
+        background-color: #1F4E79;
+        color: #FFFFFF;
+        font-weight: bold;
+        padding: 3px 8px;
+        border: 1px solid #BFBFBF;
+        text-align: center;
+      }
+      .row-grand-total td.cell-grand-label {
+        text-align: left;
+      }
+
+      /* ── Zebra stripe for severity rows ── */
+      .row-severity:nth-child(even) td {
+        background-color: #F5F9FC;
+      }
+
+      /* ── Spacing between tables ── */
+      #panel-assignee {
+        margin-top: 16px;
+      }
+    `;
+    document.head.appendChild(style);
   }
 });

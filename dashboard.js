@@ -11,10 +11,6 @@ function renderTypeDashboard(tickets) {
   <table class="pivot-table" id="table-type-dashboard">
     <thead>
       <tr>
-        <th class="header-main" colspan="1"></th>
-        <th class="header-group" colspan="${statuses.length + 1}">Column Labels</th>
-      </tr>
-      <tr>
         <th class="col-label">Type/Severity/Status</th>
         ${statuses.map(s => `<th class="col-status">${capitalize(s)}</th>`).join('')}
         <th class="col-total">Grand Total</th>
@@ -22,19 +18,8 @@ function renderTypeDashboard(tickets) {
     </thead>
     <tbody>`;
 
-  let prevType = null;
-
   rows.forEach(row => {
     if (row.kind === 'severity') {
-      // First severity row of a type: add type header row above
-      if (row.type !== prevType) {
-        html += `<tr class="row-type-label">
-          <td class="cell-type">${row.type}</td>
-          ${statuses.map(() => '<td></td>').join('')}
-          <td></td>
-        </tr>`;
-        prevType = row.type;
-      }
       const cells = statuses.map(s => {
         const v = row.counts[s] || 0;
         return `<td class="cell-value">${v > 0 ? v : ''}</td>`;
@@ -46,14 +31,15 @@ function renderTypeDashboard(tickets) {
       </tr>`;
 
     } else if (row.kind === 'type_total') {
+      // Orange header row for each type (Issue, Query, Defect, etc.)
       const cells = statuses.map(s => {
         const v = row.counts[s] || 0;
-        return `<td class="cell-subtotal">${v > 0 ? v : ''}</td>`;
+        return `<td class="cell-type-count">${v > 0 ? v : ''}</td>`;
       }).join('');
       html += `<tr class="row-type-total">
-        <td class="cell-type-total">${row.type} Total</td>
+        <td class="cell-type-label">${row.type}</td>
         ${cells}
-        <td class="cell-subtotal-total">${row.rowTotal > 0 ? row.rowTotal : ''}</td>
+        <td class="cell-type-grand">${row.rowTotal > 0 ? row.rowTotal : ''}</td>
       </tr>`;
 
     } else if (row.kind === 'grand_total') {
@@ -84,10 +70,6 @@ function renderAssigneeDashboard(tickets) {
   <table class="pivot-table" id="table-assignee-dashboard">
     <thead>
       <tr>
-        <th class="header-main" colspan="2"></th>
-        <th class="header-group" colspan="${statuses.length + 1}">Column Labels</th>
-      </tr>
-      <tr>
         <th class="col-label">Row Labels</th>
         <th class="col-label-sub">Assigned To</th>
         ${statuses.map(s => `<th class="col-status">${capitalize(s)}</th>`).join('')}
@@ -98,10 +80,15 @@ function renderAssigneeDashboard(tickets) {
 
   rows.forEach(row => {
     if (row.kind === 'type_header') {
-      html += `<tr class="row-type-label">
-        <td class="cell-type" colspan="2">${row.type}</td>
-        ${statuses.map(() => '<td></td>').join('')}
-        <td></td>
+      // Orange type header row with totals
+      const cells = statuses.map(s => {
+        const v = (row.counts && row.counts[s]) || 0;
+        return `<td class="cell-type-count">${v > 0 ? v : ''}</td>`;
+      }).join('');
+      html += `<tr class="row-type-total">
+        <td class="cell-type-label" colspan="2">${row.type}</td>
+        ${cells}
+        <td class="cell-type-grand">${row.rowTotal > 0 ? row.rowTotal : ''}</td>
       </tr>`;
 
     } else if (row.kind === 'severity_header') {
@@ -151,7 +138,6 @@ function capitalize(str) {
 }
 
 function shortenEmail(email) {
-  // Show full email but truncate very long ones for display
   if (!email || email === 'Unassigned') return email;
   if (email.length <= 35) return email;
   return email.substring(0, 32) + '...';
@@ -164,7 +150,6 @@ function copyDashboardToClipboard(tableId, btnEl) {
   const table = document.getElementById(tableId);
   if (!table) return;
 
-  // Build styled HTML that renders properly in Outlook
   const styledHtml = buildOutlookHTML(table);
 
   try {
@@ -185,7 +170,6 @@ function copyDashboardToClipboard(tableId, btnEl) {
 }
 
 function buildOutlookHTML(table) {
-  // Clone table and apply inline styles for Outlook compatibility
   const clone = table.cloneNode(true);
   const rows = clone.querySelectorAll('tr');
 
@@ -193,21 +177,37 @@ function buildOutlookHTML(table) {
     const cells = tr.querySelectorAll('td, th');
     cells.forEach(cell => {
       const cls = cell.className;
-      // Apply inline styles based on class
-      if (cls.includes('header-group') || cls.includes('col-status') || cls.includes('col-total') || cls.includes('col-label')) {
+
+      // Column header cells — dark navy, white bold
+      if (cls.includes('col-status') || cls.includes('col-total') || cls.includes('col-label')) {
         cell.style.cssText = 'background-color:#1F4E79;color:#FFFFFF;font-weight:bold;font-family:Calibri,Arial,sans-serif;font-size:11px;padding:4px 8px;border:1px solid #BFBFBF;text-align:center;';
-      } else if (cls.includes('cell-type') && !cls.includes('total')) {
-        cell.style.cssText = 'background-color:#D6E4F7;font-weight:bold;font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #BFBFBF;';
-      } else if (cls.includes('cell-type-total') || cls.includes('cell-subtotal')) {
-        cell.style.cssText = 'background-color:#BDD7EE;font-weight:bold;font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #BFBFBF;text-align:center;';
-      } else if (cls.includes('cell-grand')) {
+      }
+      // Orange type row — label cell
+      else if (cls.includes('cell-type-label')) {
+        cell.style.cssText = 'background-color:#E87722;color:#FFFFFF;font-weight:bold;font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #BFBFBF;';
+      }
+      // Orange type row — count/grand cells
+      else if (cls.includes('cell-type-count') || cls.includes('cell-type-grand')) {
+        cell.style.cssText = 'background-color:#E87722;color:#FFFFFF;font-weight:bold;font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #BFBFBF;text-align:center;';
+      }
+      // Grand total row — dark navy, white bold
+      else if (cls.includes('cell-grand-label') || cls.includes('cell-grand')) {
         cell.style.cssText = 'background-color:#1F4E79;color:#FFFFFF;font-weight:bold;font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #BFBFBF;text-align:center;';
-      } else if (cls.includes('cell-severity') || cls.includes('severity_h')) {
-        cell.style.cssText = 'background-color:#DEEAF1;font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #BFBFBF;';
-      } else if (cls.includes('cell-value') || cls.includes('cell-total')) {
-        cell.style.cssText = 'font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #BFBFBF;text-align:center;';
-      } else {
-        cell.style.cssText = 'font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #BFBFBF;';
+      }
+      // Severity label cells
+      else if (cls.includes('cell-severity') || cls.includes('cell-severity-h')) {
+        cell.style.cssText = 'background-color:#FFFFFF;font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #BFBFBF;';
+      }
+      // Data value cells and row totals
+      else if (cls.includes('cell-value') || cls.includes('cell-total')) {
+        cell.style.cssText = 'background-color:#FFFFFF;font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #BFBFBF;text-align:center;';
+      }
+      // Assignee email cells
+      else if (cls.includes('cell-assignee')) {
+        cell.style.cssText = 'background-color:#FFFFFF;font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #BFBFBF;color:#0563C1;text-decoration:underline;';
+      }
+      else {
+        cell.style.cssText = 'background-color:#FFFFFF;font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #BFBFBF;';
       }
     });
   });
@@ -217,7 +217,6 @@ function buildOutlookHTML(table) {
 }
 
 function fallbackCopy(table, btnEl) {
-  // Fallback: select table text
   const range = document.createRange();
   range.selectNode(table);
   window.getSelection().removeAllRanges();

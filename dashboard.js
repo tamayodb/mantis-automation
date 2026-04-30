@@ -12,7 +12,7 @@ function renderTypeDashboard(tickets) {
     <thead>
       <tr>
         <th class="header-main" colspan="1"></th>
-        <th class="header-group" colspan="${statuses.length + 1}">Column Labels</th>
+        <th class="header-group" colspan="1">Per Ticket Type Dashboard</th>
       </tr>
       <tr>
         <th class="col-label">Type/Severity/Status</th>
@@ -94,9 +94,9 @@ function renderAssigneeDashboard(tickets) {
   <div class="dashboard-title">Per Severity and Assigned to Dashboard</div>
   <table class="pivot-table" id="table-assignee-dashboard">
     <thead>
-      <tr>
-        <th class="header-main" colspan="2"></th>
-        <th class="header-group" colspan="${statuses.length + 1}">Column Labels</th>
+       <tr>
+        <th class="header-main" colspan="1"></th>
+        <th class="header-group" colspan="1">Per Severity and Assigned to Dashboard</th>
       </tr>
       <tr>
         <th class="col-label">Row Labels</th>
@@ -200,8 +200,8 @@ function buildOutlookHTML(table) {
   const rows = clone.querySelectorAll('tr');
 
   // Base font shared by every cell
-  const base = 'font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #BFBFBF;';
-  const navy = 'background-color:#1F4E79;color:#FFFFFF;font-weight:bold;';
+  const base = 'font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #000000;';
+  const navy = 'background-color:#5b9bd5;color:#FFFFFF;font-weight:bold;';
   const orange = 'background-color:#E87722;color:#FFFFFF;font-weight:bold;';
   const center = 'text-align:center;';
 
@@ -254,7 +254,6 @@ function buildOutlookHTML(table) {
       } else if (cls.includes('cell-assignee')) {
         cell.style.cssText = base + 'background-color:#FFFFFF;color:#0563C1;text-decoration:underline;text-align:left;';
 
-      // ── Everything else (empty spacer cells, etc.) ──
       } else {
         cell.style.cssText = base + 'background-color:#FFFFFF;';
       }

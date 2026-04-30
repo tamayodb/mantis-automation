@@ -294,14 +294,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     style.textContent = `
       /* ── Dashboard title ── */
       .dashboard-title {
-        background-color: #1F4E79;
+        background-color: #5b9bd5;
         color: #FFFFFF;
         font-family: Calibri, Arial, sans-serif;
         font-size: 12px;
         font-weight: bold;
         text-align: center;
         padding: 5px 8px;
-        border: 1px solid #BFBFBF;
+        border: 1px solid #000000;
         border-bottom: none;
       }
 
@@ -316,11 +316,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       /* ── Header row: dark navy ── */
       .pivot-table thead tr th {
-        background-color: #1F4E79;
+        background-color: #5b9bd5;
         color: #FFFFFF;
         font-weight: bold;
         padding: 4px 8px;
-        border: 1px solid #BFBFBF;
+        border: 1px solid #000000;
         text-align: center;
         white-space: nowrap;
       }
@@ -335,7 +335,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         color: #FFFFFF;
         font-weight: bold;
         padding: 3px 8px;
-        border: 1px solid #BFBFBF;
+        border: 1px solid #000000;
         text-align: left;
       }
       .row-type-total td.cell-type-count,
@@ -344,7 +344,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         color: #FFFFFF;
         font-weight: bold;
         padding: 3px 8px;
-        border: 1px solid #BFBFBF;
+        border: 1px solid #000000;
         text-align: center;
       }
 
@@ -353,7 +353,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       .row-severity-header td {
         background-color: #FFFFFF;
         padding: 3px 8px;
-        border: 1px solid #BFBFBF;
+        border: 1px solid #000000;
       }
       .cell-severity,
       .cell-severity-h {
@@ -370,7 +370,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       .row-assignee td {
         background-color: #FFFFFF;
         padding: 3px 8px;
-        border: 1px solid #BFBFBF;
+        border: 1px solid #000000;
       }
       .cell-assignee {
         color: #0563C1;
@@ -386,11 +386,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       /* ── Grand Total row: dark navy ── */
       .row-grand-total td.cell-grand-label,
       .row-grand-total td.cell-grand {
-        background-color: #1F4E79;
+        background-color: #5b9bd5;
         color: #FFFFFF;
         font-weight: bold;
         padding: 3px 8px;
-        border: 1px solid #BFBFBF;
+        border: 1px solid #000000;
         text-align: center;
       }
       .row-grand-total td.cell-grand-label {

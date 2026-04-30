@@ -6,13 +6,14 @@
 function renderTypeDashboard(tickets) {
   const { statuses, rows } = buildTypeDashboardData(tickets);
 
+  // Total columns = 1 (label) + statuses + 1 (grand total)
+  const totalCols = statuses.length + 2;
+
   let html = `
-  <div class="dashboard-title">Per Ticket Type Dashboard</div>
   <table class="pivot-table" id="table-type-dashboard">
     <thead>
       <tr>
-        <th class="header-main" colspan="1"></th>
-        <th class="header-group" colspan="1">Per Ticket Type Dashboard</th>
+        <th class="header-group" colspan="${totalCols}">Per Ticket Type Dashboard</th>
       </tr>
       <tr>
         <th class="col-label">Type/Severity/Status</th>
@@ -22,8 +23,7 @@ function renderTypeDashboard(tickets) {
     </thead>
     <tbody>`;
 
-  // Group rows so the orange type_total row renders FIRST,
-  // followed by its severity breakdown rows underneath.
+  // Group rows: orange type_total row FIRST, then severity breakdown underneath
   const groups = [];
   let currentGroup = null;
 
@@ -40,7 +40,6 @@ function renderTypeDashboard(tickets) {
 
   groups.forEach(group => {
     if (group.grandTotal) {
-      // Grand Total row — dark navy
       const row = group.grandTotal;
       const cells = statuses.map(s => {
         const v = row.counts[s] || 0;
@@ -65,7 +64,7 @@ function renderTypeDashboard(tickets) {
         <td class="cell-subtotal-total">${total.rowTotal > 0 ? total.rowTotal : ''}</td>
       </tr>`;
 
-      // Then severity breakdown rows (major, minor, block…)
+      // Then severity breakdown rows — NOT bold
       group.severities.forEach(row => {
         const cells = statuses.map(s => {
           const v = row.counts[s] || 0;
@@ -90,13 +89,29 @@ function renderTypeDashboard(tickets) {
 function renderAssigneeDashboard(tickets) {
   const { statuses, rows } = buildAssigneeDashboardData(tickets);
 
+  // Total columns = 2 (label + assigned to) + statuses + 1 (grand total)
+  const totalCols = statuses.length + 3;
+
+  // Pre-group rows: type_total first, then severity_header + assignee rows under it
+  const groups = [];
+  let currentGroup = null;
+
+  rows.forEach(row => {
+    if (row.kind === 'type_header') {
+      currentGroup = { typeRow: row, children: [] };
+      groups.push(currentGroup);
+    } else if (row.kind === 'grand_total') {
+      groups.push({ grandTotal: row });
+    } else {
+      if (currentGroup) currentGroup.children.push(row);
+    }
+  });
+
   let html = `
-  <div class="dashboard-title">Per Severity and Assigned to Dashboard</div>
   <table class="pivot-table" id="table-assignee-dashboard">
     <thead>
-       <tr>
-        <th class="header-main" colspan="1"></th>
-        <th class="header-group" colspan="1">Per Severity and Assigned to Dashboard</th>
+      <tr>
+        <th class="header-group" colspan="${totalCols}">Per Severity and Assigned to Dashboard</th>
       </tr>
       <tr>
         <th class="col-label">Row Labels</th>
@@ -107,36 +122,9 @@ function renderAssigneeDashboard(tickets) {
     </thead>
     <tbody>`;
 
-  rows.forEach(row => {
-    if (row.kind === 'type_header') {
-      html += `<tr class="row-type-label">
-        <td class="cell-type" colspan="2">${row.type}</td>
-        ${statuses.map(() => '<td></td>').join('')}
-        <td></td>
-      </tr>`;
-
-    } else if (row.kind === 'severity_header') {
-      html += `<tr class="row-severity-header">
-        <td class="cell-severity-h">&nbsp;&nbsp;&nbsp;${capitalize(row.severity)}</td>
-        <td></td>
-        ${statuses.map(() => '<td></td>').join('')}
-        <td></td>
-      </tr>`;
-
-    } else if (row.kind === 'assignee') {
-      const cells = statuses.map(s => {
-        const v = row.counts[s] || 0;
-        return `<td class="cell-value">${v > 0 ? v : ''}</td>`;
-      }).join('');
-      const shortName = shortenEmail(row.assignee);
-      html += `<tr class="row-assignee">
-        <td class="cell-empty"></td>
-        <td class="cell-assignee" title="${row.assignee}">${shortName}</td>
-        ${cells}
-        <td class="cell-total">${row.rowTotal > 0 ? row.rowTotal : ''}</td>
-      </tr>`;
-
-    } else if (row.kind === 'grand_total') {
+  groups.forEach(group => {
+    if (group.grandTotal) {
+      const row = group.grandTotal;
       const cells = statuses.map(s => {
         const v = row.counts[s] || 0;
         return `<td class="cell-grand">${v > 0 ? v : ''}</td>`;
@@ -146,6 +134,49 @@ function renderAssigneeDashboard(tickets) {
         ${cells}
         <td class="cell-grand">${row.rowTotal}</td>
       </tr>`;
+
+    } else {
+      // Orange type total row FIRST (same behaviour as Table 1)
+      const typeRow = group.typeRow;
+      const typeCells = statuses.map(s => {
+        const v = (typeRow.counts && typeRow.counts[s]) || 0;
+        return `<td class="cell-subtotal">${v > 0 ? v : ''}</td>`;
+      }).join('');
+      html += `<tr class="row-type-total">
+        <td class="cell-type-total" colspan="2">${typeRow.type}</td>
+        ${typeCells}
+        <td class="cell-subtotal-total">${typeRow.rowTotal > 0 ? typeRow.rowTotal : ''}</td>
+      </tr>`;
+
+      // Then severity headers and assignee rows — severity NOT bold
+      group.children.forEach(row => {
+        if (row.kind === 'severity_header') {
+          html += `<tr class="row-severity-header">
+            <td class="cell-severity-h">&nbsp;&nbsp;&nbsp;${capitalize(row.severity)}</td>
+            <td></td>
+            ${statuses.map(() => '<td></td>').join('')}
+            <td></td>
+          </tr>`;
+
+        } else if (row.kind === 'assignee') {
+          const cells = statuses.map(s => {
+            const v = row.counts[s] || 0;
+            return `<td class="cell-value">${v > 0 ? v : ''}</td>`;
+          }).join('');
+          const shortName = shortenEmail(row.assignee);
+          const email = row.assignee || '';
+          const isEmail = email.includes('@');
+          const assigneeCell = isEmail
+            ? `<a href="mailto:${email}" class="cell-assignee-link">${shortName}</a>`
+            : shortName;
+          html += `<tr class="row-assignee">
+            <td class="cell-empty"></td>
+            <td class="cell-assignee" title="${email}">${assigneeCell}</td>
+            ${cells}
+            <td class="cell-total">${row.rowTotal > 0 ? row.rowTotal : ''}</td>
+          </tr>`;
+        }
+      });
     }
   });
 
@@ -194,25 +225,27 @@ function copyDashboardToClipboard(tableId, btnEl) {
 }
 
 function buildOutlookHTML(table) {
-  // Clone table and apply inline styles that exactly mirror
-  // the CSS injected by injectDashboardStyles() in popup.js.
+  // Clone and apply inline styles mirroring injectDashboardStyles() in popup.js.
   const clone = table.cloneNode(true);
-  const rows = clone.querySelectorAll('tr');
 
-  // Base font shared by every cell
-  const base = 'font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #000000;';
-  const navy = 'background-color:#5b9bd5;color:#FFFFFF;font-weight:bold;';
+  // Shared style tokens
+  const base   = 'font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #000000;';
+  const navy   = 'background-color:#002060;color:#FFFFFF;font-weight:bold;';  // #002060 per spec
   const orange = 'background-color:#E87722;color:#FFFFFF;font-weight:bold;';
+  const white  = 'background-color:#FFFFFF;color:#000000;';
   const center = 'text-align:center;';
+  const left   = 'text-align:left;';
 
-  rows.forEach(tr => {
+  clone.querySelectorAll('tr').forEach(tr => {
     tr.querySelectorAll('td, th').forEach(cell => {
       const cls = cell.className;
 
-      // ── thead: header-group, col-label, col-label-sub, col-status, col-total ──
-      if (
-        cls.includes('header-group') ||
-        cls.includes('header-main') ||
+      // ── Single-cell spanning header row: "Per Ticket Type Dashboard" title ──
+      if (cls.includes('header-group') || cls.includes('header-main')) {
+        cell.style.cssText = base + navy + center + 'font-size:12px;padding:5px 8px;';
+
+      // ── Column header row: col-label, col-label-sub, col-status, col-total ──
+      } else if (
         cls.includes('col-label') ||
         cls.includes('col-label-sub') ||
         cls.includes('col-status') ||
@@ -224,38 +257,44 @@ function buildOutlookHTML(table) {
         }
 
       // ── Orange type-total row ──
-      // cell-type-total  →  label cell (left-aligned)
-      // cell-subtotal    →  count cells (centered)
-      // cell-subtotal-total → grand cell of the row (centered)
+      //   cell-type-total      → label (left)
+      //   cell-subtotal        → status counts (center)
+      //   cell-subtotal-total  → row grand total (center)
       } else if (cls.includes('cell-type-total')) {
-        cell.style.cssText = base + orange + 'text-align:left;';
+        cell.style.cssText = base + orange + left;
       } else if (cls.includes('cell-subtotal-total') || cls.includes('cell-subtotal')) {
         cell.style.cssText = base + orange + center;
 
-      // ── Orange type-label row (assignee table: cell-type) ──
-      } else if (cls.includes('cell-type')) {
-        cell.style.cssText = base + orange + 'text-align:left;';
-
-      // ── Grand total row ──
+      // ── Grand total row (navy) ──
       } else if (cls.includes('cell-grand-label')) {
-        cell.style.cssText = base + navy + 'text-align:left;';
+        cell.style.cssText = base + navy + left;
       } else if (cls.includes('cell-grand')) {
         cell.style.cssText = base + navy + center;
 
-      // ── Severity label cells ──
+      // ── Severity label cells — NOT bold ──
       } else if (cls.includes('cell-severity-h') || cls.includes('cell-severity')) {
-        cell.style.cssText = base + 'background-color:#FFFFFF;color:#000000;text-align:left;';
+        cell.style.cssText = base + white + left + 'font-weight:normal;';
 
       // ── Data value / row-total cells ──
       } else if (cls.includes('cell-value') || cls.includes('cell-total')) {
-        cell.style.cssText = base + 'background-color:#FFFFFF;color:#000000;' + center;
+        cell.style.cssText = base + white + center;
 
-      // ── Assignee email cells ──
+      // ── Assignee cell: render as Outlook mailto hyperlink ──
       } else if (cls.includes('cell-assignee')) {
-        cell.style.cssText = base + 'background-color:#FFFFFF;color:#0563C1;text-decoration:underline;text-align:left;';
+        cell.style.cssText = base + white + left;
+        // Convert any plain-text email inside to a mailto anchor
+        const a = cell.querySelector('a.cell-assignee-link');
+        if (a) {
+          a.style.cssText = 'color:#0563C1;text-decoration:underline;font-family:Calibri,Arial,sans-serif;font-size:11px;';
+        } else if (cell.textContent.includes('@')) {
+          const email = cell.getAttribute('title') || cell.textContent.trim();
+          const display = cell.textContent.trim();
+          cell.innerHTML = `<a href="mailto:${email}" style="color:#0563C1;text-decoration:underline;font-family:Calibri,Arial,sans-serif;font-size:11px;">${display}</a>`;
+        }
 
+      // ── Empty spacer cells ──
       } else {
-        cell.style.cssText = base + 'background-color:#FFFFFF;';
+        cell.style.cssText = base + white;
       }
     });
   });

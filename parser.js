@@ -7,20 +7,44 @@ function parseCSV(csvText) {
   if (!csvText || csvText.trim() === '') return [];
 
   const lines = csvText.trim().split('\n');
-  if (lines.length < 2) return [];
+  if (lines.length < 2) {
+    console.warn('[Parser] CSV has less than 2 lines:', lines.length);
+    return [];
+  }
 
   const headers = parseCSVLine(lines[0]).map(h => h.trim().replace(/^"|"$/g, ''));
+  console.log(`[Parser] Headers found: ${headers.join(', ')}`);
 
-  return lines.slice(1)
-    .map(line => {
+  const tickets = [];
+  const errors = [];
+
+  lines.slice(1).forEach((line, idx) => {
+    if (!line.trim()) return; // Skip empty lines
+
+    try {
       const values = parseCSVLine(line);
       const ticket = {};
+      
       headers.forEach((h, i) => {
         ticket[h] = (values[i] || '').trim().replace(/^"|"$/g, '');
       });
-      return ticket;
-    })
-    .filter(t => t['Id'] && t['Id'].trim() !== '');
+
+      if (ticket['Id'] && ticket['Id'].trim() !== '') {
+        tickets.push(ticket);
+      } else {
+        errors.push(`Line ${idx + 2}: Missing or empty Id`);
+      }
+    } catch (e) {
+      errors.push(`Line ${idx + 2}: Parse error - ${e.message}`);
+    }
+  });
+
+  if (errors.length > 0) {
+    console.warn(`[Parser] Parsing errors (first 5):`, errors.slice(0, 5));
+  }
+
+  console.log(`[Parser] Parsed: ${tickets.length} tickets from ${lines.length - 1} data lines`);
+  return tickets;
 }
 
 function parseCSVLine(line) {
@@ -57,10 +81,16 @@ function normalizeStatus(raw) {
 const STANDARD_STATUSES = ['assigned', 'feedback', 'resolved', 'closed'];
 
 function getStatuses(tickets) {
-  const found = new Set(tickets.map(t => normalizeStatus(t['Status'])).filter(Boolean));
+  const STANDARD_STATUSES = ['assigned', 'feedback', 'resolved', 'closed'];
+  
+  // Explicitly look at the 'Status' column to prevent numeric IDs (like 245) 
+  // from leaking into the header row
+  const found = new Set(tickets.map(t => normalizeStatus(t['Status'])).filter(s => s && isNaN(s))); 
+  
   const ordered = STANDARD_STATUSES.filter(s => found.has(s));
-  // Add any extra statuses not in the standard list
-  found.forEach(s => { if (!STANDARD_STATUSES.includes(s)) ordered.push(s); });
+  found.forEach(s => { 
+    if (!STANDARD_STATUSES.includes(s)) ordered.push(s); 
+  });
   return ordered;
 }
 

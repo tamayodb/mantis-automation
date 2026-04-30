@@ -45,8 +45,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ── 2. Load previously stored data on every popup open ──────────
   // This is the MAIN fix: always re-read storage when popup opens,
   // so we never miss data that arrived before the listener was set up.
-  chrome.storage.local.get(['lastCSV', 'lastUpdated', 'lastRawSnippet'], (data) => {
+  chrome.storage.local.get(['lastCSV', 'lastUpdated', 'lastRawSnippet', 'ticketCount'], (data) => {
+    const rawCount = data.ticketCount || (data.lastCSV ? data.lastCSV.trim().split('\n').length - 1 : 0);
+    console.log(`[Popup] Loaded from storage: ${rawCount} tickets expected`);
+
     if (data.lastCSV && data.lastCSV.trim() !== '') {
+      const parsed = parseCSV(data.lastCSV);
+      console.log(`[Popup] Parsed: ${parsed.length} tickets`);
+      
+      if (parsed.length === 0 && rawCount > 0) {
+        console.warn(`[Popup] ⚠️ DATA LOSS: Expected ${rawCount} tickets but parsed 0!`);
+      }
+
       renderAll(data.lastCSV);
       if (data.lastUpdated) {
         lastUpdated.textContent = 'Last updated: ' + formatDate(data.lastUpdated);
@@ -60,31 +70,42 @@ document.addEventListener('DOMContentLoaded', async () => {
   btnExport.addEventListener('click', () => {
     if (!activeTab) return;
     setExportLoading(true);
+    console.log('[Popup] Export button clicked');
 
     chrome.tabs.sendMessage(activeTab.id, { action: 'TRIGGER_EXPORT' }, (response) => {
       if (chrome.runtime.lastError || !response) {
+        console.error('[Popup] Cannot connect to page:', chrome.runtime.lastError);
         setExportError('Cannot connect to page. Refresh the Mantis page and try again.');
         return;
       }
       if (response && response.success === false) {
+        console.error('[Popup] Export failed:', response.error);
         setExportError(response.error || 'Export failed.');
       }
     });
 
+    // Check storage after a delay
     setTimeout(() => {
-      if (btnExport.classList.contains('loading')) {
-        // Timeout: try reading storage directly as fallback
-        chrome.storage.local.get(['lastCSV'], (data) => {
-          if (data.lastCSV) {
+      chrome.storage.local.get(['lastCSV', 'ticketCount'], (data) => {
+        const rawCount = data.ticketCount || (data.lastCSV ? data.lastCSV.trim().split('\n').length - 1 : 0);
+        console.log(`[Popup] After export - CSV size: ${data.lastCSV ? data.lastCSV.length : 0} chars, raw lines: ${rawCount}`);
+
+        if (data.lastCSV) {
+          const tickets = parseCSV(data.lastCSV);
+          console.log(`[Popup] Parsed tickets: ${tickets.length}`);
+
+          if (tickets.length > 0) {
             setExportLoading(false);
             renderAll(data.lastCSV);
-            setExportStatus('✅ Dashboard updated!', 'success');
-          } else {
-            setExportError('Timed out. See troubleshooting tips below.');
+            setExportStatus(`✅ Loaded ${tickets.length} tickets!`, 'success');
+          } else if (rawCount > 0) {
+            setExportLoading(false);
+            setExportStatus(`⚠️ CSV received (${rawCount} lines) but parsing failed. See Debug panel.`, 'warn');
+            chrome.storage.local.get(['lastCSV'], (d) => showDiagnosis(d.lastCSV));
           }
-        });
-      }
-    }, 12000);
+        }
+      });
+    }, 2000);
   });
 
   // ── 4. Storage change listener (catches real-time updates) ───────
@@ -123,11 +144,40 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ── 6. Debug button — shows raw stored CSV ───────────────────────
   btnDebug.addEventListener('click', () => {
-    chrome.storage.local.get(['lastCSV'], (data) => {
+    chrome.storage.local.get(['lastCSV', 'ticketCount'], (data) => {
       if (!data.lastCSV) {
         debugContent.textContent = 'Nothing stored yet. Click Export first.';
       } else {
-        showDiagnosis(data.lastCSV);
+        const rawCount = data.ticketCount || data.lastCSV.trim().split('\n').length - 1;
+        const parsed = parseCSV(data.lastCSV);
+        
+        console.log('[Popup] Debug - Raw lines:', rawCount, 'Parsed tickets:', parsed.length);
+        
+        let stats = `<div class="diag-stats">
+          <strong>CSV Statistics:</strong><br/>
+          📊 Size: ${data.lastCSV.length} characters<br/>
+          📝 Raw data lines: ${rawCount}<br/>
+          ✅ Successfully parsed: ${parsed.length} tickets<br/>
+          ${rawCount > parsed.length ? `⚠️ <strong style="color:red">Data loss: ${rawCount - parsed.length} lines!</strong><br/>` : ''}
+        </div>`;
+
+        if (parsed.length > 0) {
+          const sample = parsed[0];
+          stats += `<div class="diag-sample" style="margin-top:8px">
+            <strong>Sample ticket:</strong><br/>
+            <code style="font-size:9px">ID: ${sample.Id}, Type: ${sample.Type}, Status: ${sample.Status}, Assigned: ${sample['Assigned To']}</code>
+          </div>`;
+        }
+
+        debugContent.innerHTML = stats + '<hr style="margin:8px 0">' + 
+          `<details style="margin-top:8px">
+            <summary style="cursor:pointer;font-size:10px;color:#555">▶ Show raw first 300 characters</summary>
+            <pre style="font-size:9px;margin-top:4px;white-space:pre-wrap;word-break:break-all">${data.lastCSV.substring(0, 300).replace(/</g, '&lt;')}</pre>
+          </details>`;
+
+        if (rawCount > parsed.length) {
+          showDiagnosis(data.lastCSV);
+        }
       }
       debugPanel.classList.toggle('hidden');
     });

@@ -404,6 +404,23 @@ body {
   white-space: pre-wrap;
 }
 
+.diag-stats {
+  background: #E8F4F8;
+  border-left: 3px solid var(--blue-mid);
+  padding: 8px;
+  border-radius: 2px;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.diag-sample {
+  background: #F5F5F5;
+  border: 1px solid #DDD;
+  padding: 6px;
+  border-radius: 2px;
+  font-size: 10px;
+}
+
 /* ── TROUBLESHOOTING ─────────────────────── */
 .troubleshoot {
   margin-top: 16px;

@@ -35,26 +35,30 @@
   }
 
   function findCSVExportUrl() {
-    // Method 1: Direct CSV export link
+    // 1. First, try to find the actual "CSV Export" link on the page
     const links = Array.from(document.querySelectorAll('a'));
-    const csvLink = links.find(a =>
-      (a.href && a.href.includes('csv_export')) ||
-      (a.textContent && a.textContent.trim().toLowerCase() === 'csv export') ||
-      (a.textContent && a.textContent.trim().toLowerCase().includes('csv'))
+    const csvLink = links.find(a => 
+      a.href && a.href.includes('csv_export.php')
     );
+
     if (csvLink) return csvLink.href;
 
-    // Method 2: Build URL from current page context
+    // 2. Fallback: Build the URL based on the folder you are currently in
     const currentUrl = new URL(window.location.href);
-    const baseUrl = currentUrl.origin;
+    
+    // Get the folder path (e.g., "/mantisbt/")
+    const pathParts = currentUrl.pathname.split('/');
+    pathParts.pop(); // Remove "view_all_bug_page.php"
+    const directoryPath = pathParts.join('/');
+
+    // Combine: Origin (http://homantis1.smretailinc.com) + Directory (/mantisbt)
+    const baseUrl = currentUrl.origin + directoryPath + '/csv_export.php';
+    const csvUrl = new URL(baseUrl);
+
+    // 3. Attach your current filters (project_id, etc.)
     const urlParams = new URLSearchParams(window.location.search);
-
-    // Mantis standard CSV export endpoint
-    const csvUrl = new URL(baseUrl + '/csv_export.php');
-
-    // Carry over filter params if any
     urlParams.forEach((val, key) => {
-      if (!['action'].includes(key)) csvUrl.searchParams.set(key, val);
+      if (key !== 'action') csvUrl.searchParams.set(key, val);
     });
 
     return csvUrl.toString();
@@ -74,22 +78,94 @@
 
     if (msg.action === 'TRIGGER_EXPORT') {
       const csvUrl = findCSVExportUrl();
+      console.log('[Mantis] CSV Export URL:', csvUrl);
 
-      fetch(csvUrl, { credentials: 'include' })
-        .then(res => {
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          return res.text();
-        })
-        .then(csvText => {
-          chrome.runtime.sendMessage({ action: 'CSV_READY', csvData: csvText });
-          sendResponse({ success: true });
-        })
-        .catch(err => {
-          chrome.runtime.sendMessage({ action: 'CSV_ERROR', message: err.message });
-          sendResponse({ success: false, error: err.message });
+      fetch(csvUrl, { 
+        method: 'GET',
+        credentials: 'include', // Sends your login cookies
+        headers: {
+          'Accept': 'text/csv'
+        }
+      })
+      .then(async res => {
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('text/html')) {
+          // If we see HTML, the session is likely stale or URL is wrong
+          throw new Error('Mantis returned a web page instead of data. Try clicking the "CSV Export" link manually on the page once to "wake up" the session.');
+        }
+        return res.text();
+      })
+      .then(csvText => {
+        const lineCount = csvText.trim().split('\n').length;
+        const charCount = csvText.length;
+        console.log(`[Mantis] CSV fetched: ${charCount} chars, ${lineCount} lines (${lineCount - 1} tickets)`);
+
+        // For large CSVs, chunk the data to avoid message size limits
+        const maxChunkSize = 1000000; // ~1MB chunks
+        if (csvText.length > maxChunkSize) {
+          console.log(`[Mantis] Large CSV detected (${charCount} chars). Sending in chunks...`);
+          sendChunkedCSV(csvText);
+        } else {
+          chrome.runtime.sendMessage({ 
+            action: 'CSV_READY', 
+            csvData: csvText,
+            lineCount: lineCount - 1
+          }, (res) => {
+            if (chrome.runtime.lastError) {
+              console.error('[Mantis] sendMessage error:', chrome.runtime.lastError);
+            }
+          });
+        }
+        sendResponse({ success: true });
+      })
+      .catch(err => {
+        console.error('[Mantis] Fetch error:', err);
+        chrome.runtime.sendMessage({ action: 'CSV_ERROR', message: err.message });
+        sendResponse({ success: false, error: err.message });
+      });
+
+      return true;
+    }
+
+    function sendChunkedCSV(csvText) {
+      // Split CSV preserving header in each chunk
+      const lines = csvText.split('\n');
+      const header = lines[0];
+      const dataLines = lines.slice(1);
+      const maxLinesPerChunk = 500;
+      let chunkIndex = 0;
+
+      function sendNextChunk() {
+        if (chunkIndex * maxLinesPerChunk >= dataLines.length) {
+          // All chunks sent, signal completion
+          chrome.runtime.sendMessage({ 
+            action: 'CSV_CHUNKS_DONE',
+            totalLines: dataLines.length
+          });
+          return;
+        }
+
+        const start = chunkIndex * maxLinesPerChunk;
+        const end = Math.min(start + maxLinesPerChunk, dataLines.length);
+        const chunk = [header, ...dataLines.slice(start, end)].join('\n');
+        
+        chrome.runtime.sendMessage({ 
+          action: 'CSV_CHUNK',
+          chunkIndex: chunkIndex,
+          chunk: chunk,
+          isLast: end >= dataLines.length
+        }, (res) => {
+          if (chrome.runtime.lastError) {
+            console.error(`[Mantis] Chunk ${chunkIndex} error:`, chrome.runtime.lastError);
+          } else {
+            console.log(`[Mantis] Chunk ${chunkIndex} sent (lines ${start}-${end})`);
+            chunkIndex++;
+            sendNextChunk();
+          }
         });
+      }
 
-      return true; // keep message channel open for async
+      sendNextChunk();
     }
   });
 })();

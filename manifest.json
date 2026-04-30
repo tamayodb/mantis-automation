@@ -4,7 +4,9 @@
   "version": "1.0.0",
   "description": "Auto-extract Mantis tickets and generate SQA Defect Management Dashboard",
   "permissions": ["activeTab", "scripting", "storage", "downloads"],
-  "host_permissions": ["*://*/*"],
+  "host_permissions": [
+    "http://homantis1.smretailinc.com/*"
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {

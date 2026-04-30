@@ -6,7 +6,6 @@
 function renderTypeDashboard(tickets) {
   const { statuses, rows } = buildTypeDashboardData(tickets);
 
-  // Total columns = 1 (label) + statuses + 1 (grand total)
   const totalCols = statuses.length + 2;
 
   let html = `
@@ -23,7 +22,6 @@ function renderTypeDashboard(tickets) {
     </thead>
     <tbody>`;
 
-  // Group rows: orange type_total row FIRST, then severity breakdown underneath
   const groups = [];
   let currentGroup = null;
 
@@ -52,7 +50,6 @@ function renderTypeDashboard(tickets) {
       </tr>`;
 
     } else {
-      // Orange type total row FIRST
       const total = group.total;
       const totalCells = statuses.map(s => {
         const v = total.counts[s] || 0;
@@ -64,7 +61,6 @@ function renderTypeDashboard(tickets) {
         <td class="cell-subtotal-total">${total.rowTotal > 0 ? total.rowTotal : ''}</td>
       </tr>`;
 
-      // Then severity breakdown rows — NOT bold
       group.severities.forEach(row => {
         const cells = statuses.map(s => {
           const v = row.counts[s] || 0;
@@ -89,10 +85,8 @@ function renderTypeDashboard(tickets) {
 function renderAssigneeDashboard(tickets) {
   const { statuses, rows } = buildAssigneeDashboardData(tickets);
 
-  // Total columns = 2 (label + assigned to) + statuses + 1 (grand total)
   const totalCols = statuses.length + 3;
 
-  // Pre-group rows: type_total first, then severity_header + assignee rows under it
   const groups = [];
   let currentGroup = null;
 
@@ -136,7 +130,6 @@ function renderAssigneeDashboard(tickets) {
       </tr>`;
 
     } else {
-      // Orange type total row FIRST (same behaviour as Table 1)
       const typeRow = group.typeRow;
       const typeCells = statuses.map(s => {
         const v = (typeRow.counts && typeRow.counts[s]) || 0;
@@ -148,7 +141,6 @@ function renderAssigneeDashboard(tickets) {
         <td class="cell-subtotal-total">${typeRow.rowTotal > 0 ? typeRow.rowTotal : ''}</td>
       </tr>`;
 
-      // Then severity headers and assignee rows — severity NOT bold
       group.children.forEach(row => {
         if (row.kind === 'severity_header') {
           html += `<tr class="row-severity-header">
@@ -225,81 +217,94 @@ function copyDashboardToClipboard(tableId, btnEl) {
 }
 
 function buildOutlookHTML(table) {
-  // Clone and apply inline styles mirroring injectDashboardStyles() in popup.js.
   const clone = table.cloneNode(true);
 
-  // Shared style tokens
-  const base   = 'font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #000000;';
-  const navy   = 'background-color:#002060;color:#FFFFFF;font-weight:bold;';  // #002060 per spec
-  const orange = 'background-color:#E87722;color:#FFFFFF;font-weight:bold;';
-  const white  = 'background-color:#FFFFFF;color:#000000;';
-  const center = 'text-align:center;';
-  const left   = 'text-align:left;';
+  // ── Style tokens ──────────────────────────────────────────────────
+  const font      = 'font-family:Calibri,Arial,sans-serif;font-size:11px;';
+  const border    = 'border:1px solid #000000;';
+  const pad       = 'padding:4px 8px;';
+  const base      = font + border + pad;
+
+  // Row 1: dark navy title bar
+  const S_HEADER  = base + 'background-color:#002060 !important;color:#FFFFFF !important;font-weight:bold;text-align:center;font-size:12px;';
+
+  // Row 2: lighter blue column headers — ALL columns same colour
+  const S_COLHEAD = base + 'background-color:#5B9BD5 !important;color:#FFFFFF !important;font-weight:bold;text-align:center;';
+  const S_COLHEAD_LEFT = base + 'background-color:#5B9BD5 !important;color:#FFFFFF !important;font-weight:bold;text-align:left;';
+
+  // Orange type rows
+  const S_ORANGE_L = base + 'background-color:#E87722 !important;color:#FFFFFF !important;font-weight:bold;text-align:left;';
+  const S_ORANGE_C = base + 'background-color:#E87722 !important;color:#FFFFFF !important;font-weight:bold;text-align:center;';
+
+  // Grand total row — dark navy, white
+  const S_GRAND_L = base + 'background-color:#002060 !important;color:#FFFFFF !important;font-weight:bold;text-align:left;';
+  const S_GRAND_C = base + 'background-color:#002060 !important;color:#FFFFFF !important;font-weight:bold;text-align:center;';
+
+  // Severity breakdown rows — white bg, NOT bold
+  const S_SEV_LBL = base + 'background-color:#FFFFFF;color:#000000;font-weight:normal;text-align:left;';
+  const S_SEV_VAL = base + 'background-color:#FFFFFF;color:#000000;font-weight:normal;text-align:center;';
+
+  // Assignee cell
+  const S_ASSIGNEE = base + 'background-color:#FFFFFF;color:#000000;font-weight:normal;text-align:left;';
+
+  // Empty spacer
+  const S_EMPTY   = base + 'background-color:#FFFFFF;color:#000000;';
+  // ─────────────────────────────────────────────────────────────────
 
   clone.querySelectorAll('tr').forEach(tr => {
     tr.querySelectorAll('td, th').forEach(cell => {
-      const cls = cell.className;
+      const cls = cell.className || '';
 
-      // ── Single-cell spanning header row: "Per Ticket Type Dashboard" title ──
+      // Row 1 — title spanning header
       if (cls.includes('header-group') || cls.includes('header-main')) {
-        cell.style.cssText = 'color:#FFFFFF;font-size:12px;padding:5px 8px;' + center + navy;
+        cell.setAttribute('style', S_HEADER);
 
-      // ── Column header row: col-label, col-label-sub, col-status, col-total ──
-      } else if (
-        cls.includes('col-label') ||
-        cls.includes('col-label-sub') ||
-        cls.includes('col-status') ||
-        cls.includes('col-total')
-      ) {
-        cell.style.cssText = base + center;
-          if (cls.includes('col-label') || cls.includes('col-label-sub')) {
-            cell.style.textAlign = 'left';
-            cell.style.backgroundColor = '#5B9BD5';
-          }
-      // ── Orange type-total row ──
-      //   cell-type-total      → label (left)
-      //   cell-subtotal        → status counts (center)
-      //   cell-subtotal-total  → row grand total (center)
+      // Row 2 — column headers (all same lighter blue)
+      } else if (cls.includes('col-label') || cls.includes('col-label-sub')) {
+        cell.setAttribute('style', S_COLHEAD_LEFT);
+      } else if (cls.includes('col-status') || cls.includes('col-total')) {
+        cell.setAttribute('style', S_COLHEAD);
+
+      // Orange type-total row
       } else if (cls.includes('cell-type-total')) {
-        cell.style.cssText = base + orange + left;
+        cell.setAttribute('style', S_ORANGE_L);
       } else if (cls.includes('cell-subtotal-total') || cls.includes('cell-subtotal')) {
-        cell.style.cssText = base + orange + center;
+        cell.setAttribute('style', S_ORANGE_C);
 
-      // ── Grand total row (navy) ──
+      // Grand total row — white text on navy
       } else if (cls.includes('cell-grand-label')) {
-        cell.style.cssText = base + navy + left;
+        cell.setAttribute('style', S_GRAND_L);
       } else if (cls.includes('cell-grand')) {
-        cell.style.cssText = base + navy + center;
+        cell.setAttribute('style', S_GRAND_C);
 
-      // ── Severity label cells — NOT bold ──
+      // Severity label — NOT bold
       } else if (cls.includes('cell-severity-h') || cls.includes('cell-severity')) {
-        cell.style.cssText = base + white + left + 'font-weight:normal;';
+        cell.setAttribute('style', S_SEV_LBL);
 
-      // ── Data value / row-total cells ──
+      // Data value / row-total cells — NOT bold
       } else if (cls.includes('cell-value') || cls.includes('cell-total')) {
-        cell.style.cssText = base + white + center + 'font-weight:normal;';
+        cell.setAttribute('style', S_SEV_VAL);
 
-      // ── Assignee cell: render as Outlook mailto hyperlink ──
+      // Assignee cell — mailto hyperlink, NOT bold
       } else if (cls.includes('cell-assignee')) {
-        cell.style.cssText = base + white + left + 'font-weight:normal;';
-        // Convert any plain-text email inside to a mailto anchor
+        cell.setAttribute('style', S_ASSIGNEE);
         const a = cell.querySelector('a.cell-assignee-link');
         if (a) {
-          a.style.cssText = 'color:#0563C1;text-decoration:underline;font-family:Calibri,Arial,sans-serif;font-size:11px;';
+          a.setAttribute('style', 'color:#0563C1;text-decoration:underline;' + font);
         } else if (cell.textContent.includes('@')) {
-          const email = cell.getAttribute('title') || cell.textContent.trim();
+          const email   = (cell.getAttribute('title') || cell.textContent).trim();
           const display = cell.textContent.trim();
-          cell.innerHTML = `<a href="mailto:${email}" style="color:#0563C1;text-decoration:underline;font-family:Calibri,Arial,sans-serif;font-size:11px;">${display}</a>`;
+          cell.innerHTML = `<a href="mailto:${email}" style="color:#0563C1;text-decoration:underline;${font}">${display}</a>`;
         }
 
-      // ── Empty spacer cells ──
+      // Empty spacers
       } else {
-        cell.style.cssText = base + white;
+        cell.setAttribute('style', S_EMPTY);
       }
     });
   });
 
-  clone.style.cssText = 'border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;';
+  clone.setAttribute('style', 'border-collapse:collapse;' + font);
   return clone.outerHTML;
 }
 

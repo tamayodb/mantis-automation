@@ -150,19 +150,20 @@ body {
 
 /* ── DASHBOARD AREA ──────────────────────── */
 #dashboard-area {
-  padding: 10px 14px 14px;
-  overflow-x: auto;
+  display: block;
+  width: 100%;
+  padding: 14px;
 }
 
 #dashboards-row {
-  display: flex;
-  gap: 20px;
-  align-items: flex-start;
+  display: block;
+  width: 100%;
 }
 
 .dashboard-panel {
-  flex: 1 1 auto;
-  min-width: 380px;
+  width: 100%;
+  margin-bottom: 40px;
+  display: block;
 }
 
 /* ── DASHBOARD TITLE ─────────────────────── */
@@ -175,171 +176,116 @@ body {
   padding: 5px 10px;
   letter-spacing: 0.2px;
   margin-bottom: 0;
+  display: none;
 }
 
 /* ── PIVOT TABLE ─────────────────────────── */
 .pivot-table {
-  border-collapse: collapse;
   width: 100%;
-  font-size: 11px;
-  font-family: Calibri Light, Calibri, Arial, sans-serif;
-  font-weight: normal;
+  border-collapse: collapse;
   margin-bottom: 0;
+  font-family: Calibri Light, Calibri, Arial, sans-serif;
+  font-size: 11px;
+  display: table;
 }
 
-/* Header rows */
+.pivot-table thead {
+  display: table-header-group;
+}
+
+.pivot-table tbody {
+  display: table-row-group;
+}
+
+.pivot-table tr {
+  display: table-row;
+}
+
+.pivot-table td,
+.pivot-table th {
+  display: table-cell;
+}
+
 .pivot-table thead tr:first-child th {
-  background: var(--blue-dark);
-  color: var(--white);
+  background-color: #1F4E79;
+  color: #ffffff;
   font-weight: bold;
-  border: 1px solid var(--blue-mid);
-  padding: 4px 8px;
+  padding: 8px;
+  border: 1px solid #000000;
   text-align: center;
 }
 
-.header-main { background: var(--blue-dark) !important; }
-.header-group {
-  background: var(--blue-dark) !important;
-  font-style: italic;
-  font-size: 10px;
-  letter-spacing: 0.3px;
-}
-
-.pivot-table thead tr:last-child th {
-  background: var(--blue-dark);
-  color: var(--white);
+.pivot-table thead tr:nth-child(2) th {
+  background-color: #5B9BD5;
+  color: #000000;
   font-weight: bold;
-  border: 1px solid #2C5F8A;
-  padding: 4px 8px;
+  padding: 8px;
+  border: 1px solid #000000;
   text-align: center;
-  white-space: nowrap;
 }
 
-.col-label { text-align: left !important; min-width: 140px; }
-.col-label-sub { text-align: left !important; min-width: 160px; }
-.col-status { min-width: 70px; background: #D0DDF5 !important; color: var(--text-dark) !important; }
-.col-total { min-width: 80px; background: #D0DDF5 !important; color: var(--text-dark) !important; }
+.pivot-table tbody tr {
+  height: auto;
+}
 
-/* Body rows */
-.pivot-table tbody tr { vertical-align: middle; }
-
-/* Type label row */
-.row-type-label td.cell-type {
-  background: var(--orange-type);
-  color: var(--white);
-  font-weight: bold;
-  padding: 3px 8px;
-  border: 1px solid var(--gray-border);
+.pivot-table td {
+  padding: 4px 8px;
+  border: 1px solid #000000;
+  font-family: Calibri Light, Calibri, Arial, sans-serif;
   font-size: 11px;
 }
 
 .row-type-label td {
-  background: var(--orange-type);
-  border: 1px solid var(--gray-border);
-  padding: 3px 2px;
-}
-
-/* Severity row */
-.row-severity td.cell-severity {
-  background: var(--blue-pale);
-  padding: 3px 8px;
-  border: 1px solid var(--gray-border);
-  font-size: 11px;
-  color: var(--text-mid);
-}
-
-.row-severity td {
-  background: var(--white);
-  border: 1px solid var(--gray-border);
-  padding: 3px 6px;
-  text-align: center;
-}
-
-/* Type total row */
-.row-type-total td.cell-type-total {
-  background: var(--blue-light);
+  background-color: #E87722;
+  color: #000000;
   font-weight: bold;
-  padding: 3px 8px;
-  border: 1px solid var(--gray-border);
-  font-size: 11px;
+}
+
+.row-type-total td {
+  background-color: #E87722;
+  color: #000000;
+  font-weight: bold;
+  text-align: left;
 }
 
 .row-type-total td.cell-subtotal,
 .row-type-total td.cell-subtotal-total {
-  background: var(--blue-light);
-  font-weight: bold;
-  border: 1px solid var(--gray-border);
   text-align: center;
-  padding: 3px 6px;
 }
 
-/* Grand total row */
+.row-severity td,
+.row-assignee td {
+  background-color: #000000;
+  color: #000000;
+  font-weight: normal;
+}
+
+.row-severity td.cell-value,
+.row-assignee td.cell-value,
+.row-assignee td.cell-total {
+  text-align: center;
+}
+
 .row-grand-total td {
-  background: var(--orange-type);
-  color: var(--white);
+  background-color: #5B9BD5;
+  color: #000000;
   font-weight: bold;
-  border: 1px solid var(--gray-border);
-  padding: 4px 8px;
-  text-align: center;
-}
-
-.row-grand-total td.cell-grand-label {
   text-align: left;
 }
 
-/* Value cells */
-.cell-value {
+.row-grand-total td.cell-grand {
   text-align: center;
-  color: var(--text-dark);
 }
 
-.cell-total {
-  text-align: center;
-  font-weight: bold;
-  background: #D0DDF5 !important;
-  color: var(--text-dark) !important;
-  border: 1px solid var(--gray-border);
-  padding: 3px 6px;
-}
-
-/* Assignee dashboard specifics */
-.row-severity-header td.cell-severity-h {
-  background: var(--blue-pale);
-  font-weight: bold;
-  padding: 3px 8px;
-  border: 1px solid var(--gray-border);
-  font-size: 11px;
-}
-
-.row-severity-header td {
-  background: var(--blue-pale);
-  border: 1px solid var(--gray-border);
-  padding: 3px 2px;
-}
-
-.row-assignee td {
-  background: var(--white);
-  border: 1px solid var(--gray-border);
-  padding: 2px 6px;
-}
-
-.cell-assignee {
-  font-size: 10px;
-  color: var(--text-mid);
+.col-label,
+.col-label-sub {
   text-align: left !important;
-  max-width: 180px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.cell-empty {
-  background: var(--white);
-  border: 1px solid var(--gray-border);
+.col-status,
+.col-total {
+  text-align: center !important;
 }
-
-/* Zebra striping for assignee rows */
-.row-assignee:nth-child(even) td { background: #FAFBFD; }
 
 /* ── EMPTY STATE ─────────────────────────── */
 #empty-state {

@@ -266,11 +266,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const t2 = document.getElementById('table-assignee-dashboard');
     if (!t1 && !t2) return;
 
-    const title1 = '<p style="font-weight:bold;font-family:Calibri,Arial,sans-serif;font-size:12px;margin:0 0 4px 0;">Per Ticket Type Dashboard</p>';
-    const title2 = '<p style="font-weight:bold;font-family:Calibri,Arial,sans-serif;font-size:12px;margin:16px 0 4px 0;">Per Severity and Assigned to Dashboard</p>';
+    // Build HTML with spacing between tables
     const html1  = t1 ? buildOutlookHTML(t1) : '';
     const html2  = t2 ? buildOutlookHTML(t2) : '';
-    const combined = `<div style="font-family:Calibri,Arial,sans-serif;">${title1}${html1}${title2}${html2}</div>`;
+    
+    // Add 30px margin-top to second table for spacing
+    const combined = `
+      <div style="font-family:Calibri,Arial,sans-serif;">
+        ${html1}
+        <div style="height:30px;"></div>
+        ${html2}
+      </div>
+    `;
 
     try {
       const blob     = new Blob([combined], { type: 'text/html' });
@@ -280,6 +287,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         btnEl.textContent = '✅ Copied!';
         btnEl.classList.add('copied');
         setTimeout(() => { btnEl.textContent = orig; btnEl.classList.remove('copied'); }, 3000);
+      }).catch(() => {
+        setExportStatus('❌ Copy failed', 'error');
       });
     } catch (e) {
       setExportStatus('❌ Copy failed: ' + e.message, 'error');

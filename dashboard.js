@@ -92,12 +92,21 @@ function renderAssigneeDashboard(tickets) {
 
   rows.forEach(row => {
     if (row.kind === 'type_header') {
-      currentGroup = { typeRow: row, children: [] };
+      currentGroup = { typeRow: row, children: [], typeTotals: { counts: {}, rowTotal: 0 } };
       groups.push(currentGroup);
     } else if (row.kind === 'grand_total') {
       groups.push({ grandTotal: row });
     } else {
-      if (currentGroup) currentGroup.children.push(row);
+      if (currentGroup) {
+        currentGroup.children.push(row);
+        // Accumulate type totals
+        if (row.kind === 'assignee') {
+          statuses.forEach(s => {
+            currentGroup.typeTotals.counts[s] = (currentGroup.typeTotals.counts[s] || 0) + (row.counts[s] || 0);
+            currentGroup.typeTotals.rowTotal += row.counts[s] || 0;
+          });
+        }
+      }
     }
   });
 
@@ -131,14 +140,16 @@ function renderAssigneeDashboard(tickets) {
 
     } else {
       const typeRow = group.typeRow;
+      
+      // Orange type row with totals
       const typeCells = statuses.map(s => {
-        const v = (typeRow.counts && typeRow.counts[s]) || 0;
+        const v = (group.typeTotals.counts && group.typeTotals.counts[s]) || 0;
         return `<td class="cell-subtotal">${v > 0 ? v : ''}</td>`;
       }).join('');
       html += `<tr class="row-type-total">
         <td class="cell-type-total" colspan="2">${typeRow.type}</td>
         ${typeCells}
-        <td class="cell-subtotal-total">${typeRow.rowTotal > 0 ? typeRow.rowTotal : ''}</td>
+        <td class="cell-subtotal-total">${group.typeTotals.rowTotal > 0 ? group.typeTotals.rowTotal : ''}</td>
       </tr>`;
 
       group.children.forEach(row => {
@@ -228,27 +239,27 @@ function buildOutlookHTML(table) {
   // Row 1: dark navy title bar
   const S_HEADER  = base + 'background-color:#002060 !important;color:#FFFFFF !important;font-weight:bold;text-align:center;font-size:12px;';
 
-  // Row 2: lighter blue column headers — ALL columns same colour
-  const S_COLHEAD = base + 'background-color:#5B9BD5 !important;color:#FFFFFF !important;font-weight:bold;text-align:center;';
-  const S_COLHEAD_LEFT = base + 'background-color:#5B9BD5 !important;color:#FFFFFF !important;font-weight:bold;text-align:left;';
+  // Row 2: lighter blue column headers — ALL columns same colour, WHITE TEXT
+  const S_COLHEAD = base + 'background-color:#5B9BD5 !important;color:#000000 !important;font-weight:bold;text-align:center;';
+  const S_COLHEAD_LEFT = base + 'background-color:#5B9BD5 !important;color:#000000 !important;font-weight:bold;text-align:left;';
 
   // Orange type rows
-  const S_ORANGE_L = base + 'background-color:#E87722 !important;color:#FFFFFF !important;font-weight:bold;text-align:left;';
-  const S_ORANGE_C = base + 'background-color:#E87722 !important;color:#FFFFFF !important;font-weight:bold;text-align:center;';
+  const S_ORANGE_L = base + 'background-color:#E87722 !important;color:#000000 !important;font-weight:bold;text-align:left;';
+  const S_ORANGE_C = base + 'background-color:#E87722 !important;color:#000000 !important;font-weight:bold;text-align:center;';
 
-  // Grand total row — dark navy, white
-  const S_GRAND_L = base + 'background-color:#002060 !important;color:#FFFFFF !important;font-weight:bold;text-align:left;';
-  const S_GRAND_C = base + 'background-color:#002060 !important;color:#FFFFFF !important;font-weight:bold;text-align:center;';
+  // Grand total row — dark navy, white text
+  const S_GRAND_L = base + 'background-color:#5B9BD5 !important;color:#FFFFFF !important;font-weight:bold;text-align:left;';
+  const S_GRAND_C = base + 'background-color:#5B9BD5 !important;color:#FFFFFF !important;font-weight:bold;text-align:center;';
 
-  // Severity breakdown rows — white bg, NOT bold
-  const S_SEV_LBL = base + 'background-color:#FFFFFF;color:#000000;font-weight:normal;text-align:left;';
-  const S_SEV_VAL = base + 'background-color:#FFFFFF;color:#000000;font-weight:normal;text-align:center;';
+  // Severity breakdown rows — white bg, black text, NOT bold
+  const S_SEV_LBL = base + 'background-color:#FFFFFF !important;color:#000000 !important;font-weight:normal;text-align:left;';
+  const S_SEV_VAL = base + 'background-color:#FFFFFF !important;color:#000000 !important;font-weight:normal;text-align:center;';
 
   // Assignee cell
-  const S_ASSIGNEE = base + 'background-color:#FFFFFF;color:#000000;font-weight:normal;text-align:left;';
+  const S_ASSIGNEE = base + 'background-color:#FFFFFF !important;color:#000000 !important;font-weight:normal;text-align:left;';
 
   // Empty spacer
-  const S_EMPTY   = base + 'background-color:#FFFFFF;color:#000000;';
+  const S_EMPTY   = base + 'background-color:#FFFFFF !important;color:#000000 !important;';
   // ─────────────────────────────────────────────────────────────────
 
   clone.querySelectorAll('tr').forEach(tr => {
@@ -259,7 +270,7 @@ function buildOutlookHTML(table) {
       if (cls.includes('header-group') || cls.includes('header-main')) {
         cell.setAttribute('style', S_HEADER);
 
-      // Row 2 — column headers (all same lighter blue)
+      // Row 2 — column headers (all same lighter blue with WHITE text)
       } else if (cls.includes('col-label') || cls.includes('col-label-sub')) {
         cell.setAttribute('style', S_COLHEAD_LEFT);
       } else if (cls.includes('col-status') || cls.includes('col-total')) {
@@ -277,15 +288,15 @@ function buildOutlookHTML(table) {
       } else if (cls.includes('cell-grand')) {
         cell.setAttribute('style', S_GRAND_C);
 
-      // Severity label — NOT bold
+      // Severity label — black text, NOT bold
       } else if (cls.includes('cell-severity-h') || cls.includes('cell-severity')) {
         cell.setAttribute('style', S_SEV_LBL);
 
-      // Data value / row-total cells — NOT bold
+      // Data value / row-total cells — black text, NOT bold
       } else if (cls.includes('cell-value') || cls.includes('cell-total')) {
         cell.setAttribute('style', S_SEV_VAL);
 
-      // Assignee cell — mailto hyperlink, NOT bold
+      // Assignee cell — mailto hyperlink, black text, NOT bold
       } else if (cls.includes('cell-assignee')) {
         cell.setAttribute('style', S_ASSIGNEE);
         const a = cell.querySelector('a.cell-assignee-link');

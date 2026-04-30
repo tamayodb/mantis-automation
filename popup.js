@@ -1,5 +1,3 @@
-// popup.js - Main popup controller
-
 document.addEventListener('DOMContentLoaded', async () => {
 
   const btnExport     = document.getElementById('btn-export');
@@ -18,7 +16,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let currentTickets  = [];
 
-  // ── 1. Check if we're on a Mantis page ──────────────────────────
   let activeTab = null;
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -42,9 +39,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnExport.disabled = false;
   }
 
-  // ── 2. Load previously stored data on every popup open ──────────
-  // This is the MAIN fix: always re-read storage when popup opens,
-  // so we never miss data that arrived before the listener was set up.
   chrome.storage.local.get(['lastCSV', 'lastUpdated', 'lastRawSnippet', 'ticketCount'], (data) => {
     const rawCount = data.ticketCount || (data.lastCSV ? data.lastCSV.trim().split('\n').length - 1 : 0);
     console.log(`[Popup] Loaded from storage: ${rawCount} tickets expected`);
@@ -66,7 +60,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // ── 3. Export button ─────────────────────────────────────────────
   btnExport.addEventListener('click', () => {
     if (!activeTab) return;
     setExportLoading(true);
@@ -108,7 +101,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 2000);
   });
 
-  // ── 4. Storage change listener (catches real-time updates) ───────
   chrome.storage.onChanged.addListener((changes) => {
     if (changes.lastCSV && changes.lastCSV.newValue) {
       setExportLoading(false);
@@ -131,7 +123,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // ── 5. Copy buttons ──────────────────────────────────────────────
   document.getElementById('btn-copy-both').addEventListener('click', function () {
     copyBothDashboards(this);
   });
@@ -142,7 +133,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     copyDashboardToClipboard('table-assignee-dashboard', this);
   });
 
-  // ── 6. Debug button — shows raw stored CSV ───────────────────────
   btnDebug.addEventListener('click', () => {
     chrome.storage.local.get(['lastCSV', 'ticketCount'], (data) => {
       if (!data.lastCSV) {
@@ -150,32 +140,61 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else {
         const rawCount = data.ticketCount || data.lastCSV.trim().split('\n').length - 1;
         const parsed = parseCSV(data.lastCSV);
+        const lost = rawCount - parsed.length;
+        const lossPercent = rawCount > 0 ? Math.round((lost / rawCount) * 100) : 0;
         
-        console.log('[Popup] Debug - Raw lines:', rawCount, 'Parsed tickets:', parsed.length);
+        console.log('[Popup] Debug - Raw lines:', rawCount, 'Parsed tickets:', parsed.length, 'Lost:', lost);
         
         let stats = `<div class="diag-stats">
           <strong>CSV Statistics:</strong><br/>
-          📊 Size: ${data.lastCSV.length} characters<br/>
-          📝 Raw data lines: ${rawCount}<br/>
-          ✅ Successfully parsed: ${parsed.length} tickets<br/>
-          ${rawCount > parsed.length ? `⚠️ <strong style="color:red">Data loss: ${rawCount - parsed.length} lines!</strong><br/>` : ''}
-        </div>`;
+          CSV Size: ${data.lastCSV.length} characters<br/>
+          Raw data lines: ${rawCount}<br/>
+          Successfully parsed: ${parsed.length} tickets<br/>`;
+
+        if (lost > 0) {
+          stats += `<strong style="color:#C30000">Data Loss: ${lost} lines (${lossPercent}%)</strong><br/>
+          Likely cause: Fields with embedded newlines (Description, Steps to Reproduce)<br/>
+          Fix: Check Mantis export has all columns quoted properly<br/>`;
+        } else {
+          stats += `<strong style="color:#107C10">No data loss detected!</strong><br/>`;
+        }
+        
+        stats += `</div>`;
 
         if (parsed.length > 0) {
           const sample = parsed[0];
           stats += `<div class="diag-sample" style="margin-top:8px">
             <strong>Sample ticket:</strong><br/>
-            <code style="font-size:9px">ID: ${sample.Id}, Type: ${sample.Type}, Status: ${sample.Status}, Assigned: ${sample['Assigned To']}</code>
+            ID: ${sample.Id} | Type: ${sample.Type} | Status: ${sample.Status}
           </div>`;
         }
 
         debugContent.innerHTML = stats + '<hr style="margin:8px 0">' + 
-          `<details style="margin-top:8px">
+          `<div style="margin-top:8px">
+            <button id="btn-download-csv" class="btn-secondary" style="margin-right:8px;padding:6px 10px;font-size:10px;">⬇️ Download CSV</button>
+          </div>
+          <details style="margin-top:8px">
             <summary style="cursor:pointer;font-size:10px;color:#555">▶ Show raw first 300 characters</summary>
             <pre style="font-size:9px;margin-top:4px;white-space:pre-wrap;word-break:break-all">${data.lastCSV.substring(0, 300).replace(/</g, '&lt;')}</pre>
           </details>`;
 
-        if (rawCount > parsed.length) {
+ 
+        setTimeout(() => {
+          const dlBtn = document.getElementById('btn-download-csv');
+          if (dlBtn) {
+            dlBtn.addEventListener('click', () => {
+              const blob = new Blob([data.lastCSV], { type: 'text/csv' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = 'mantis-export-' + new Date().toISOString().slice(0, 10) + '.csv';
+              a.click();
+              URL.revokeObjectURL(url);
+            });
+          }
+        }, 10);
+
+        if (lost > 0) {
           showDiagnosis(data.lastCSV);
         }
       }
@@ -183,15 +202,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // ── 7. Load Sample Data button ───────────────────────────────────
-  btnSample.addEventListener('click', () => {
-    const sampleCSV = getSampleCSV();
-    chrome.storage.local.set({ lastCSV: sampleCSV, lastUpdated: new Date().toISOString() }, () => {
-      renderAll(sampleCSV);
-      setExportStatus('✅ Sample data loaded!', 'success');
-      lastUpdated.textContent = 'Last updated: ' + formatDate(new Date().toISOString()) + ' (sample)';
-    });
-  });
 
   // ── RENDER ───────────────────────────────────────────────────────
   function renderAll(csvText) {
@@ -211,47 +221,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     debugPanel.classList.add('hidden');
     dashboardArea.classList.remove('hidden');
     copyBar.classList.remove('hidden');
-  }
-
-  // ── DIAGNOSIS — shown when CSV arrives but can't be parsed ───────
-  function showDiagnosis(csv) {
-    const first300 = csv.substring(0, 300).replace(/</g, '&lt;');
-    const isHTML   = csv.trim().startsWith('<') || csv.toLowerCase().includes('<html');
-    const lines    = csv.trim().split('\n');
-    const headers  = lines[0] || '(empty)';
-
-    let diagnosis = '';
-
-    if (isHTML) {
-      diagnosis = `
-        <div class="diag-error">❌ <strong>Got an HTML page instead of CSV.</strong><br/>
-        This usually means the export URL is redirecting to a <strong>login page</strong> or an error page.<br/><br/>
-        <strong>Fix:</strong> Make sure you are logged in to Mantis and on the <em>View Issues</em> page, then try exporting again.</div>`;
-    } else if (lines.length < 2) {
-      diagnosis = `<div class="diag-warn">⚠️ CSV is empty or has only 1 line.</div>`;
-    } else {
-      const hasId   = headers.toLowerCase().includes('id');
-      const hasType = headers.toLowerCase().includes('type');
-      diagnosis = `
-        <div class="diag-warn">⚠️ CSV received but no tickets parsed.<br/>
-        <strong>Header row found:</strong><br/>
-        <code>${headers.replace(/</g, '&lt;')}</code><br/><br/>
-        ${!hasId   ? '❌ Missing column: <strong>Id</strong><br/>' : ''}
-        ${!hasType ? '❌ Missing column: <strong>Type</strong> (needed for dashboard grouping)<br/>' : ''}
-        <strong>Fix:</strong> Check that your Mantis CSV export includes the <em>Type</em>, <em>Severity</em>, <em>Status</em>, and <em>Assigned To</em> columns.</div>`;
-    }
-
-    debugContent.innerHTML = `
-      ${diagnosis}
-      <details style="margin-top:8px">
-        <summary style="cursor:pointer;font-size:10px;color:#555">▶ Show raw first 300 characters</summary>
-        <pre style="font-size:9px;margin-top:4px;white-space:pre-wrap;word-break:break-all">${first300}</pre>
-      </details>`;
-
-    debugPanel.classList.remove('hidden');
-    emptyState.classList.remove('hidden');
-    dashboardArea.classList.add('hidden');
-    copyBar.classList.add('hidden');
   }
 
   function showEmpty() {
@@ -291,7 +260,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // ── Copy BOTH tables for Outlook ─────────────────────────────────
   function copyBothDashboards(btnEl) {
     const t1 = document.getElementById('table-type-dashboard');
     const t2 = document.getElementById('table-assignee-dashboard');
@@ -308,7 +276,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const clipItem = new ClipboardItem({ 'text/html': blob });
       navigator.clipboard.write([clipItem]).then(() => {
         const orig = btnEl.textContent;
-        btnEl.textContent = '✅ Copied! Paste into Outlook.';
+        btnEl.textContent = '✅ Copied!';
         btnEl.classList.add('copied');
         setTimeout(() => { btnEl.textContent = orig; btnEl.classList.remove('copied'); }, 3000);
       });
@@ -317,26 +285,3 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 });
-
-// ── SAMPLE DATA (Mantis Extract template) ─────────
-function getSampleCSV() {
-  return `Id,Project,Reporter,Summary,Description,Steps to Reproduce,Notes,Status,Type,Assigned To,Priority,Severity,Category,Date Submitted,Cycle,Origin,Reopened
-63789,Project MyPrime - WWLI SQA SIT,user@smretail.com,[Time and Attendance] System permits filing of Field Itineraries with past dates,Description,,Notes,assigned,Defect,rrl@aclt-computing.com,normal,minor,Time and Attendance,2025-06-26,Cycle 1,,
-63773,Project MyPrime - WWLI SQA SIT,user@smretail.com,[Time and Attendance] Deficient maximum acceptable character count,Description,,Notes,resolved,Issue,user@smretail.com,normal,minor,Time and Attendance,2025-06-26,Cycle 1, No Error,
-63592,Project MyPrime - WWLI SQA SIT,user@smretail.com,[Time and Attendance] Time entries from TK device did not reflect,Description,,Notes,feedback,Issue,user@smretail.com,normal,major,Time and Attendance,2025-06-20,Cycle 1, Test Data/Environment,
-63599,Project MyPrime - WWLI SQA SIT,user@smretail.com,[Time and Attendance] Incorrect time entries being recorded,Description,,Notes,closed,Defect,user@smretail.com,normal,minor,Time and Attendance,2025-06-20,Cycle 1, No Error,
-63724,Project MyPrime - WWLI SQA SIT,user@smretail.com,[Time and Attendance] Leave Hours displaying 1.00,Description,,Notes,closed,Defect,user@smretail.com,normal,minor,Time and Attendance,2025-06-25,Cycle 1, Test Data/Environment,
-63656,Project MyPrime - WWLI SQA SIT,user@smretail.com,Inaccessible/Not Working Modules in PROD Instance,Description,,Notes,resolved,Query,user@smretail.com,normal,minor,Homepage and Prime Modules,2025-06-23,Cycle 1, No Error,
-63703,Project MyPrime - WWLI SQA SIT,user@smretail.com,[Time and Attendance] Observed discrepancy in Filters,Description,,Notes,closed,Issue,user@smretail.com,normal,minor,Time and Attendance,2025-06-24,Cycle 1, No Error,
-63710,Project MyPrime - WWLI SQA SIT,user@smretail.com,[Time and Attendance - Holiday] Calendar size misaligned,Description,,Notes,assigned,Issue,elm@aclt-computing.com,normal,minor,Time and Attendance,2025-06-25,Cycle 1,,
-63421,Project MyPrime - WWLI SQA SIT,user@smretail.com,[Homepage] Error encountered when changing company,Description,,Notes,closed,Defect,user@smretail.com,normal,major,Homepage and Prime Modules,2025-06-13,Cycle 1, Test Data/Environment,
-63586,Project MyPrime - WWLI SQA SIT,user@smretail.com,[myCenter - Timekeeping] Inconsistent dates being displayed,Description,,Notes,assigned,Issue,elm@aclt-computing.com,normal,minor,MyCenter,2025-06-20,Cycle 1,,
-63563,Project MyPrime - WWLI SQA SIT,user@smretail.com,[Time and Attendance] Values entered are not visible,Description,,Notes,closed,Issue,user@smretail.com,normal,minor,Time and Attendance,2025-06-19,Cycle 1, No Error,
-63552,Project MyPrime - WWLI SQA SIT,user@smretail.com,[Time and Attendance] Field Itinerary still labeled as Official Business,Description,,Notes,closed,Defect,user@smretail.com,normal,minor,Time and Attendance,2025-06-19,Cycle 1, No Error,
-63516,Project MyPrime - WWLI SQA SIT,user@smretail.com,[Organizational Data] IP Address Location is empty,Description,,Notes,closed,Setup,user@smretail.com,normal,minor,Organizational Data,2025-06-18,Cycle 1, Test Data/Environment,
-63412,Project MyPrime - WWLI SQA SIT,user@smretail.com,[Organizational Data] Confusing tab name when opening Branches,Description,,Notes,closed,Issue,user@smretail.com,normal,minor,Organizational Data,2025-06-13,Cycle 1, Test Data/Environment,
-63326,Project MyPrime - WWLI SQA SIT,user@smretail.com,[Organizational Data] Server Error in Application,Description,,Notes,closed,Defect,user@smretail.com,normal,major,Organizational Data,2025-06-11,Cycle 1, Code Error/Program Bug,
-63350,Project MyPrime - WWLI SQA SIT,user@smretail.com,[Organizational Data] Active/Inactive field not displayed in Branches,Description,,Notes,assigned,Setup,elm@aclt-computing.com,normal,minor,Organizational Data,2025-06-11,Cycle 1,,
-63354,Project MyPrime - WWLI SQA SIT,user@smretail.com,[Organizational Data] Unable to add Company,Description,,Notes,closed,Setup,user@smretail.com,normal,minor,Organizational Data,2025-06-11,Cycle 1, No Error,
-63344,Project MyPrime - WWLI SQA SIT,user@smretail.com,[Organizational Data] Active/Inactive field not displayed in Company page,Description,,Notes,assigned,Setup,elm@aclt-computing.com,normal,minor,Organizational Data,2025-06-11,Cycle 1,,`;
-}

@@ -1,5 +1,3 @@
-// dashboard.js - Renders HTML tables that replicate the Excel Defect Dashboard
-
 // ─────────────────────────────────────────────
 // TABLE 1: Per Ticket Type Dashboard
 // ─────────────────────────────────────────────
@@ -26,7 +24,7 @@ function renderTypeDashboard(tickets) {
 
   rows.forEach(row => {
     if (row.kind === 'severity') {
-      // First severity row of a type: add type header row above
+   
       if (row.type !== prevType) {
         html += `<tr class="row-type-label">
           <td class="cell-type">${row.type}</td>
@@ -84,7 +82,7 @@ function renderAssigneeDashboard(tickets) {
   <table class="pivot-table" id="table-assignee-dashboard">
     <thead>
       <tr>
-        <th class="header-main" colspan="2"></th>
+        <th class="header-main" colspan="2">Row Labels</th>
         <th class="header-group" colspan="${statuses.length + 1}">Column Labels</th>
       </tr>
       <tr>
@@ -106,8 +104,7 @@ function renderAssigneeDashboard(tickets) {
 
     } else if (row.kind === 'severity_header') {
       html += `<tr class="row-severity-header">
-        <td class="cell-severity-h">&nbsp;&nbsp;&nbsp;${capitalize(row.severity)}</td>
-        <td></td>
+        <td class="cell-severity-h" colspan="2">&nbsp;&nbsp;&nbsp;${capitalize(row.severity)}</td>
         ${statuses.map(() => '<td></td>').join('')}
         <td></td>
       </tr>`;
@@ -158,13 +155,13 @@ function shortenEmail(email) {
 }
 
 // ─────────────────────────────────────────────
-// COPY TO CLIPBOARD (formatted for Outlook paste)
+// COPY TO CLIPBOARD
 // ─────────────────────────────────────────────
 function copyDashboardToClipboard(tableId, btnEl) {
   const table = document.getElementById(tableId);
   if (!table) return;
 
-  // Build styled HTML that renders properly in Outlook
+
   const styledHtml = buildOutlookHTML(table);
 
   try {
@@ -185,7 +182,6 @@ function copyDashboardToClipboard(tableId, btnEl) {
 }
 
 function buildOutlookHTML(table) {
-  // Clone table and apply inline styles for Outlook compatibility
   const clone = table.cloneNode(true);
   const rows = clone.querySelectorAll('tr');
 
@@ -193,26 +189,28 @@ function buildOutlookHTML(table) {
     const cells = tr.querySelectorAll('td, th');
     cells.forEach(cell => {
       const cls = cell.className;
-      // Apply inline styles based on class
+     
       if (cls.includes('header-group') || cls.includes('col-status') || cls.includes('col-total') || cls.includes('col-label')) {
-        cell.style.cssText = 'background-color:#1F4E79;color:#FFFFFF;font-weight:bold;font-family:Calibri,Arial,sans-serif;font-size:11px;padding:4px 8px;border:1px solid #BFBFBF;text-align:center;';
-      } else if (cls.includes('cell-type') && !cls.includes('total')) {
-        cell.style.cssText = 'background-color:#D6E4F7;font-weight:bold;font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #BFBFBF;';
+        cell.style.cssText = 'background-color:#1F4E79;color:#FFFFFF;font-weight:bold;font-family:Calibri Light,Calibri,Arial,sans-serif;font-size:11px;padding:4px 8px;border:1px solid #BFBFBF;text-align:center;';
+      } else if (cls.includes('cell-type') && !cls.includes('total') && !cls.includes('grand')) {
+        cell.style.cssText = 'background-color:#4472C4;color:#FFFFFF;font-weight:bold;font-family:Calibri Light,Calibri,Arial,sans-serif;font-size:11px;padding:4px 8px;border:1px solid #BFBFBF;';
       } else if (cls.includes('cell-type-total') || cls.includes('cell-subtotal')) {
-        cell.style.cssText = 'background-color:#BDD7EE;font-weight:bold;font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #BFBFBF;text-align:center;';
+        cell.style.cssText = 'background-color:#FFFFFF;font-weight:bold;font-family:Calibri Light,Calibri,Arial,sans-serif;font-size:11px;padding:4px 8px;border:1px solid #BFBFBF;text-align:center;';
+      } else if (cls.includes('cell-grand-label')) {
+        cell.style.cssText = 'background-color:#1F4E79;color:#FFFFFF;font-weight:bold;font-family:Calibri Light,Calibri,Arial,sans-serif;font-size:11px;padding:4px 8px;border:1px solid #BFBFBF;';
       } else if (cls.includes('cell-grand')) {
-        cell.style.cssText = 'background-color:#1F4E79;color:#FFFFFF;font-weight:bold;font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #BFBFBF;text-align:center;';
+        cell.style.cssText = 'background-color:#1F4E79;color:#FFFFFF;font-weight:bold;font-family:Calibri Light,Calibri,Arial,sans-serif;font-size:11px;padding:4px 8px;border:1px solid #BFBFBF;text-align:center;';
       } else if (cls.includes('cell-severity') || cls.includes('severity_h')) {
-        cell.style.cssText = 'background-color:#DEEAF1;font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #BFBFBF;';
+        cell.style.cssText = 'background-color:#FFFFFF;font-family:Calibri Light,Calibri,Arial,sans-serif;font-size:11px;padding:4px 8px;border:1px solid #BFBFBF;';
       } else if (cls.includes('cell-value') || cls.includes('cell-total')) {
-        cell.style.cssText = 'font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #BFBFBF;text-align:center;';
+        cell.style.cssText = 'background-color:#FFFFFF;font-family:Calibri Light,Calibri,Arial,sans-serif;font-size:11px;padding:4px 8px;border:1px solid #BFBFBF;text-align:center;';
       } else {
-        cell.style.cssText = 'font-family:Calibri,Arial,sans-serif;font-size:11px;padding:3px 8px;border:1px solid #BFBFBF;';
+        cell.style.cssText = 'background-color:#FFFFFF;font-family:Calibri Light,Calibri,Arial,sans-serif;font-size:11px;padding:4px 8px;border:1px solid #BFBFBF;';
       }
     });
   });
 
-  clone.style.cssText = 'border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11px;';
+  clone.style.cssText = 'border-collapse:collapse;font-family:Calibri Light,Calibri,Arial,sans-serif;font-size:11px;';
   return clone.outerHTML;
 }
 
